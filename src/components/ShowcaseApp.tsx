@@ -40,6 +40,8 @@ import PinModal from "./PinModal";
 import SemesterModal from "./SemesterModal";
 import FolderModal from "./FolderModal";
 import ThemeToggle from "./ThemeToggle";
+import DocumentPreview from "./DocumentPreview";
+import FolderCarousel from "./FolderCarousel";
 
 interface ShowcaseAppProps {
   initialSemesters: Semester[];
@@ -847,29 +849,59 @@ export default function ShowcaseApp({
                     Selecione um semestre para acessar as pastas de projetos, relatórios e apresentações.
                   </p>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                  <div className="space-y-4">
                     {semesters.map((sem) => {
-                      const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
+                      const semFiles = files.filter((f) => f.semesterId === sem.id);
                       const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
 
                       return (
                         <div
                           key={sem.id}
-                          onClick={() => {
-                            setActiveSemesterId(sem.id);
-                            setActiveFolderId(null);
-                          }}
-                          className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                          className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
                         >
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400">
+                          <div className="flex items-center justify-between">
+                            <div
+                              onClick={() => {
+                                setActiveSemesterId(sem.id);
+                                setActiveFolderId(null);
+                              }}
+                              className="group flex cursor-pointer items-center gap-3 min-w-0"
+                            >
+                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
                                 <FolderIcon className="h-6 w-6" />
                               </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="truncate text-base font-bold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
+                                    {sem.name}
+                                  </h3>
+                                  <span className="text-xs text-neutral-400">—</span>
+                                  <p className="truncate text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                                    {sem.title || "Projeto Integrador"}
+                                  </p>
+                                </div>
+                                <p className="text-[11px] text-neutral-400">
+                                  {semFoldersCount} pasta(s) · {semFiles.length} arquivo(s)
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveSemesterId(sem.id);
+                                  setActiveFolderId(null);
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800/70 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                              >
+                                <span>Abrir Semestre</span>
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </button>
 
                               {isAdmin && (
                                 <div
-                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
+                                  className="flex items-center gap-1"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <button
@@ -894,19 +926,13 @@ export default function ShowcaseApp({
                                 </div>
                               )}
                             </div>
-
-                            <h3 className="mt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-                              {sem.name}
-                            </h3>
-                            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
-                              {sem.title || "Projeto Integrador"}
-                            </p>
                           </div>
 
-                          <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] text-neutral-400 dark:border-neutral-800/60">
-                            <span>{semFoldersCount} pasta(s)</span>
-                            <span>{semFilesCount} arquivo(s)</span>
-                          </div>
+                          {/* Carrossel de Pré-visualização dos Arquivos deste Semestre (se não houver arquivos, não aparece) */}
+                          <FolderCarousel
+                            files={semFiles}
+                            onSelectFile={(id) => setSelectedFileId(id)}
+                          />
                         </div>
                       );
                     })}
@@ -923,55 +949,79 @@ export default function ShowcaseApp({
                       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
                         Pastas ({currentSubfolders.length})
                       </h2>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                      <div className="space-y-3.5">
                         {currentSubfolders.map((fld) => {
-                          const subFilesCount = files.filter((f) => f.folderId === fld.id).length;
+                          const subFiles = files.filter((f) => f.folderId === fld.id);
                           return (
                             <div
                               key={fld.id}
-                              onClick={() => setActiveFolderId(fld.id)}
-                              className="group flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                              className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
                             >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400">
-                                  <FolderIcon className="h-5 w-5" />
+                              <div className="flex items-center justify-between">
+                                <div
+                                  onClick={() => setActiveFolderId(fld.id)}
+                                  className="group flex cursor-pointer items-center gap-3 min-w-0"
+                                >
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
+                                    <FolderIcon className="h-5 w-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="truncate text-sm font-semibold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
+                                        {fld.name}
+                                      </p>
+                                      <ChevronRight className="h-4 w-4 text-neutral-400 transition group-hover:translate-x-0.5" />
+                                    </div>
+                                    <p className="text-[11px] text-neutral-400">
+                                      {subFiles.length} arquivo(s)
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                                    {fld.name}
-                                  </p>
-                                  <p className="text-[11px] text-neutral-400">
-                                    {subFilesCount} arquivo(s)
-                                  </p>
+
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveFolderId(fld.id)}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                                  >
+                                    <span>Abrir</span>
+                                    <ChevronRight className="h-3 w-3" />
+                                  </button>
+
+                                  {isAdmin && (
+                                    <div
+                                      className="flex items-center gap-1"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingFolder(fld);
+                                          setFolderModalOpen(true);
+                                        }}
+                                        className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                        title="Renomear pasta"
+                                      >
+                                        <Edit3 className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleDeleteFolder(e, fld)}
+                                        className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                        title="Excluir pasta"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
-                              {isAdmin && (
-                                <div
-                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingFolder(fld);
-                                      setFolderModalOpen(true);
-                                    }}
-                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                                    title="Renomear pasta"
-                                  >
-                                    <Edit3 className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleDeleteFolder(e, fld)}
-                                    className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-                                    title="Excluir pasta"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              )}
+                              {/* Carrossel de Pré-visualização de Arquivos da Subpasta (se não houver arquivos, não aparece) */}
+                              <FolderCarousel
+                                files={subFiles}
+                                onSelectFile={(id) => setSelectedFileId(id)}
+                              />
                             </div>
                           );
                         })}
@@ -1014,22 +1064,27 @@ export default function ShowcaseApp({
                         )}
                       </div>
                     ) : viewMode === "grid" ? (
-                      /* Grade de Arquivos */
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                      /* Grade de Arquivos com Preview de Documento */
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                         {filteredFiles.map((file) => (
                           <div
                             key={file.id}
                             onClick={() => setSelectedFileId(file.id)}
-                            className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                            className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
                           >
                             <div>
-                              <div className="flex items-center justify-between">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-800">
-                                  <FileCategoryIcon category={file.category} />
-                                </div>
+                              {/* Preview do Documento no Card */}
+                              <div className="relative mb-3 h-36 sm:h-40 w-full overflow-hidden rounded-lg border border-neutral-200/80 bg-neutral-100/70 dark:border-neutral-800 dark:bg-neutral-950">
+                                <DocumentPreview file={file} />
 
+                                {/* Badge com a extensão */}
+                                <span className="absolute left-2 top-2 rounded bg-neutral-900/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white shadow-xs backdrop-blur-xs dark:bg-neutral-100/90 dark:text-neutral-900">
+                                  {file.extension.toUpperCase() || "ARQ"}
+                                </span>
+
+                                {/* Ações no hover */}
                                 <div
-                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
+                                  className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/90 p-1 opacity-0 shadow-xs backdrop-blur-xs transition group-hover:opacity-100 dark:bg-neutral-900/90"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <a
@@ -1037,7 +1092,7 @@ export default function ShowcaseApp({
                                     download={file.name}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                    className="rounded p-1 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
                                     title="Baixar arquivo"
                                   >
                                     <Download className="h-3.5 w-3.5" />
@@ -1046,7 +1101,7 @@ export default function ShowcaseApp({
                                     <button
                                       type="button"
                                       onClick={(e) => handleDeleteFile(e, file)}
-                                      className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                      className="rounded p-1 text-neutral-600 hover:bg-red-50 hover:text-red-600 dark:text-neutral-300 dark:hover:bg-red-950/40"
                                       title="Excluir arquivo"
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -1055,13 +1110,18 @@ export default function ShowcaseApp({
                                 </div>
                               </div>
 
-                              <p className="mt-3 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                                {file.name}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <FileCategoryIcon category={file.category} className="h-4 w-4 shrink-0" />
+                                <p className="truncate text-xs sm:text-sm font-semibold text-neutral-900 dark:text-neutral-100" title={file.name}>
+                                  {file.name}
+                                </p>
+                              </div>
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2.5 text-[11px] text-neutral-400 dark:border-neutral-800/60">
-                              <span className="font-mono font-semibold uppercase">{file.extension || "ARQ"}</span>
+                            <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2 text-[11px] text-neutral-400 dark:border-neutral-800/60">
+                              <span className="font-mono uppercase font-semibold text-neutral-500 dark:text-neutral-400">
+                                {file.extension || "ARQ"}
+                              </span>
                               <span>{formatBytes(file.size)}</span>
                             </div>
                           </div>

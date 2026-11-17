@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ChevronDown,
   ChevronRight,
   Download,
   Edit3,
@@ -100,6 +101,176 @@ function DotMatrixIcon({ className = "h-4 w-4 text-[#c96726] dark:text-[#d77435]
   );
 }
 
+interface SidebarFolderNodeProps {
+  folder: Folder;
+  allFolders: Folder[];
+  allFiles: FileItem[];
+  activeSemesterId: string | null;
+  activeFolderId: string | null;
+  selectedFileId: string | null;
+  expandedFolders: Record<string, boolean>;
+  onToggleFolder: (folderId: string) => void;
+  onSelectFolder: (folder: Folder) => void;
+  onSelectFile: (file: FileItem) => void;
+  depth?: number;
+}
+
+function SidebarFolderNode({
+  folder,
+  allFolders,
+  allFiles,
+  activeSemesterId,
+  activeFolderId,
+  selectedFileId,
+  expandedFolders,
+  onToggleFolder,
+  onSelectFolder,
+  onSelectFile,
+  depth = 0,
+}: SidebarFolderNodeProps) {
+  // Uma pasta é considerada aberta se explicitamente expandida ou se for a pasta ativa no momento
+  const isExpanded = expandedFolders[folder.id] !== undefined
+    ? expandedFolders[folder.id]
+    : activeFolderId === folder.id;
+
+  const isActive = activeFolderId === folder.id;
+  const childFolders = allFolders.filter((f) => f.parentId === folder.id);
+  const folderFiles = allFiles.filter((f) => f.folderId === folder.id);
+  const hasItems = childFolders.length > 0 || folderFiles.length > 0;
+
+  return (
+    <div className="select-none">
+      {/* Linha da Pasta no Sidebar */}
+      <div
+        className={`group flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 font-mono text-xs transition ${
+          isActive
+            ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
+            : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
+        }`}
+        onClick={() => onSelectFolder(folder)}
+      >
+        <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFolder(folder.id);
+            }}
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded transition ${
+              isActive
+                ? "text-[#fafbf7]/80 hover:text-white dark:text-[#1a1614]/80 dark:hover:text-[#1a1614]"
+                : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+            }`}
+            title={isExpanded ? "Recolher pasta" : "Expandir pasta"}
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-3 w-3 shrink-0" />
+            ) : (
+              <ChevronRight className="h-3 w-3 shrink-0" />
+            )}
+          </button>
+
+          {isExpanded ? (
+            <FolderOpen
+              className={`h-3.5 w-3.5 shrink-0 ${
+                isActive
+                  ? "text-[#c96726] dark:text-[#d77435]"
+                  : "text-[#c96726] dark:text-[#d77435]"
+              }`}
+            />
+          ) : (
+            <FolderIcon
+              className={`h-3.5 w-3.5 shrink-0 ${
+                isActive
+                  ? "text-[#fafbf7] dark:text-[#1a1614]"
+                  : "text-[#c96726] dark:text-[#d77435]"
+              }`}
+            />
+          )}
+
+          <span className="truncate">{folder.name}</span>
+        </div>
+
+        <span
+          className={`ml-1 shrink-0 font-mono text-[10px] ${
+            isActive
+              ? "text-[#fafbf7]/70 dark:text-[#1a1614]/70"
+              : "text-[#736d67]/60 dark:text-[#9c968f]/60"
+          }`}
+        >
+          {folderFiles.length}
+        </span>
+      </div>
+
+      {/* Conteúdo da Pasta Aberta (Subpastas + Arquivos) - Estilo VS Code Explorer */}
+      {isExpanded && (
+        <div className="relative ml-2.5 mt-0.5 space-y-0.5 border-l border-dashed border-[#1a1614]/15 pl-2 dark:border-white/10">
+          {/* Subpastas dentro desta pasta */}
+          {childFolders.map((subFld) => (
+            <SidebarFolderNode
+              key={subFld.id}
+              folder={subFld}
+              allFolders={allFolders}
+              allFiles={allFiles}
+              activeSemesterId={activeSemesterId}
+              activeFolderId={activeFolderId}
+              selectedFileId={selectedFileId}
+              expandedFolders={expandedFolders}
+              onToggleFolder={onToggleFolder}
+              onSelectFolder={onSelectFolder}
+              onSelectFile={onSelectFile}
+              depth={depth + 1}
+            />
+          ))}
+
+          {/* Arquivos dentro desta pasta aberta */}
+          {folderFiles.map((file) => {
+            const isFileActive = selectedFileId === file.id;
+            return (
+              <div
+                key={file.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectFile(file);
+                }}
+                className={`group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 font-mono text-xs transition ${
+                  isFileActive
+                    ? "bg-[#c96726]/15 text-[#1a1614] dark:text-[#fafbf7] font-semibold border-l-2 border-[#c96726]"
+                    : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
+                }`}
+                title={`${file.name} (${formatBytes(file.size)})`}
+              >
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <FileCategoryIcon category={file.category} className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{file.name}</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1 pl-1.5">
+                  {isFileActive ? (
+                    <span
+                      className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
+                      title="Arquivo aberto no visualizador"
+                    />
+                  ) : (
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-[#736d67]/50 dark:text-[#9c968f]/50">
+                      {file.extension}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {!hasItems && (
+            <div className="px-2 py-1 text-[10px] font-mono italic text-[#736d67]/50 dark:text-[#9c968f]/50">
+              (pasta vazia)
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ShowcaseApp({
   initialSemesters,
   initialFolders,
@@ -150,6 +321,17 @@ export default function ShowcaseApp({
   });
 
   const [selectedFileId, setSelectedFileId] = useState<string | null>(initialFileId || null);
+
+  // Estados de expansão do explorer da sidebar (estilo VS Code)
+  const [expandedSemesters, setExpandedSemesters] = useState<Record<string, boolean>>(() => {
+    if (initialSemesterId) return { [initialSemesterId]: true };
+    return {};
+  });
+
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>(() => {
+    if (initialFolderId) return { [initialFolderId]: true };
+    return {};
+  });
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [isDragging, setIsDragging] = useState(false);
@@ -224,6 +406,94 @@ export default function ShowcaseApp({
     const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
     window.history.replaceState(null, "", nextUrl);
   }, [activeSemesterId, activeFolderId, selectedFileId]);
+
+  // Auto-expande o semestre ativo na sidebar
+  useEffect(() => {
+    if (activeSemesterId) {
+      setExpandedSemesters((prev) => ({ ...prev, [activeSemesterId]: true }));
+    }
+  }, [activeSemesterId]);
+
+  // Auto-expande a pasta ativa (e todas as suas pastas pai se aninhadas) na sidebar
+  useEffect(() => {
+    if (activeFolderId) {
+      setExpandedFolders((prev) => {
+        const next = { ...prev, [activeFolderId]: true };
+        let current = folders.find((f) => f.id === activeFolderId);
+        while (current?.parentId) {
+          next[current.parentId] = true;
+          current = folders.find((f) => f.id === current?.parentId);
+        }
+        return next;
+      });
+    }
+  }, [activeFolderId, folders]);
+
+  // Auto-expande a pasta e semestre do arquivo ativo
+  useEffect(() => {
+    if (selectedFileId) {
+      const file = files.find((f) => f.id === selectedFileId);
+      if (file) {
+        if (file.folderId) {
+          setExpandedFolders((prev) => {
+            const next = { ...prev, [file.folderId!]: true };
+            let current = folders.find((f) => f.id === file.folderId);
+            while (current?.parentId) {
+              next[current.parentId] = true;
+              current = folders.find((f) => f.id === current?.parentId);
+            }
+            return next;
+          });
+        }
+        if (file.semesterId) {
+          setExpandedSemesters((prev) => ({ ...prev, [file.semesterId]: true }));
+        }
+      }
+    }
+  }, [selectedFileId, files, folders]);
+
+  // Ações de navegação do Sidebar (estilo VS Code)
+  const toggleSemesterExpansion = (semId: string) => {
+    setExpandedSemesters((prev) => {
+      const isCurrentlyOpen = prev[semId] !== undefined ? prev[semId] : semId === activeSemesterId;
+      return { ...prev, [semId]: !isCurrentlyOpen };
+    });
+  };
+
+  const toggleFolderExpansion = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const isCurrentlyOpen = prev[folderId] !== undefined ? prev[folderId] : folderId === activeFolderId;
+      return { ...prev, [folderId]: !isCurrentlyOpen };
+    });
+  };
+
+  const handleSidebarSelectSemester = (semId: string) => {
+    setActiveSemesterId(semId);
+    setActiveFolderId(null);
+    setSelectedFileId(null);
+    setExpandedSemesters((prev) => ({ ...prev, [semId]: true }));
+  };
+
+  const handleSidebarSelectFolder = (folder: Folder) => {
+    setActiveSemesterId(folder.semesterId);
+    setActiveFolderId(folder.id);
+    setSelectedFileId(null);
+    setExpandedFolders((prev) => ({ ...prev, [folder.id]: true }));
+  };
+
+  const handleSidebarSelectFile = (file: FileItem) => {
+    setActiveSemesterId(file.semesterId);
+    if (file.folderId) {
+      setActiveFolderId(file.folderId);
+      setExpandedFolders((prev) => ({ ...prev, [file.folderId!]: true }));
+    } else {
+      setActiveFolderId(null);
+    }
+    setSelectedFileId(file.id);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
 
   const activeSemester = useMemo(
     () => semesters.find((s) => s.id === activeSemesterId) || null,
@@ -748,9 +1018,12 @@ export default function ShowcaseApp({
         >
           {/* Header do Sidebar */}
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-dashed border-[#1a1614]/15 px-4 dark:border-white/10">
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
-              01 / NAVEGAÇÃO PRINCIPAL
-            </span>
+            <div className="flex items-center gap-2">
+              <DotMatrixIcon className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                01 / EXPLORER
+              </span>
+            </div>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
@@ -788,7 +1061,7 @@ export default function ShowcaseApp({
             <div>
               <div className="mb-2 flex items-center justify-between px-1">
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
-                  {isLockedScope && !isAdmin ? "02 / SEMESTRE AUTORIZADO" : `02 / SEMESTRES (${semesters.length})`}
+                  {isLockedScope && !isAdmin ? "02 / ÁRVORE AUTORIZADA" : `02 / PROJETOS & ARQUIVOS (${semesters.length})`}
                 </span>
                 {isAdmin && (
                   <button
@@ -798,6 +1071,7 @@ export default function ShowcaseApp({
                       setSemesterModalOpen(true);
                     }}
                     className="inline-flex items-center gap-1 rounded-full border border-[#1a1614]/15 bg-white/70 px-2 py-0.5 font-mono text-[10px] font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                    title="Novo semestre"
                   >
                     <Plus className="h-2.5 w-2.5" />
                     <span>NOVO</span>
@@ -805,42 +1079,154 @@ export default function ShowcaseApp({
                 )}
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {semesters
                   .filter((sem) => !isLockedScope || isAdmin || sem.id === activeSemesterId)
                   .map((sem, idx) => {
-                  const active = sem.id === activeSemesterId;
-                  const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
-                  const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
+                    const isSemActive = sem.id === activeSemesterId;
+                    const isSemOpen = expandedSemesters[sem.id] !== undefined
+                      ? expandedSemesters[sem.id]
+                      : isSemActive;
+                    const semFolders = folders.filter(
+                      (f) => f.semesterId === sem.id && !f.parentId
+                    );
+                    const semRootFiles = files.filter(
+                      (f) => f.semesterId === sem.id && !f.folderId
+                    );
+                    const totalSemFiles = files.filter((f) => f.semesterId === sem.id).length;
+                    const totalSemFolders = folders.filter((f) => f.semesterId === sem.id).length;
 
-                  return (
-                    <div
-                      key={sem.id}
-                      onClick={() => {
-                        setActiveSemesterId(sem.id);
-                        setActiveFolderId(null);
-                        setSelectedFileId(null);
-                        if (window.innerWidth < 1024) setSidebarOpen(false);
-                      }}
-                      className={`group flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 font-mono text-xs transition ${
-                        active
-                          ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
-                          : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`text-[10px] ${active ? "text-[#c96726] dark:text-[#d77435]" : "text-[#736d67]/60 dark:text-[#9c968f]/60"}`}>
-                          {String(idx + 1).padStart(2, "0")}
-                        </span>
-                        <FolderIcon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-[#fafbf7] dark:text-[#1a1614]" : "text-[#c96726] dark:text-[#d77435]"}`} />
-                        <span className="truncate">{sem.name}</span>
+                    return (
+                      <div key={sem.id} className="select-none">
+                        {/* Linha do Semestre */}
+                        <div
+                          onClick={() => handleSidebarSelectSemester(sem.id)}
+                          className={`group flex cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 font-mono text-xs transition ${
+                            isSemActive && !activeFolderId && !selectedFileId
+                              ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
+                              : isSemActive
+                              ? "bg-[#1a1614]/5 text-[#1a1614] dark:bg-white/5 dark:text-[#fafbf7] font-medium"
+                              : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSemesterExpansion(sem.id);
+                              }}
+                              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+                              title={isSemOpen ? "Recolher ciclo" : "Expandir ciclo"}
+                            >
+                              {isSemOpen ? (
+                                <ChevronDown className="h-3 w-3 shrink-0" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3 shrink-0" />
+                              )}
+                            </button>
+
+                            <span
+                              className={`text-[10px] ${
+                                isSemActive
+                                  ? "text-[#c96726] dark:text-[#d77435]"
+                                  : "text-[#736d67]/60 dark:text-[#9c968f]/60"
+                              }`}
+                            >
+                              {String(idx + 1).padStart(2, "0")}
+                            </span>
+
+                            {isSemOpen ? (
+                              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-[#c96726] dark:text-[#d77435]" />
+                            ) : (
+                              <FolderIcon className="h-3.5 w-3.5 shrink-0 text-[#c96726] dark:text-[#d77435]" />
+                            )}
+
+                            <span className="truncate">{sem.name}</span>
+                          </div>
+
+                          <span
+                            className={`text-[10px] ${
+                              isSemActive
+                                ? "opacity-75"
+                                : "text-[#736d67]/60 dark:text-[#9c968f]/60"
+                            }`}
+                          >
+                            {totalSemFolders}p · {totalSemFiles}a
+                          </span>
+                        </div>
+
+                        {/* Conteúdo do Semestre Expandido */}
+                        {isSemOpen && (
+                          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-dashed border-[#1a1614]/15 pl-2 dark:border-white/10">
+                            {/* Pastas de primeiro nível do semestre */}
+                            {semFolders.map((fld) => (
+                              <SidebarFolderNode
+                                key={fld.id}
+                                folder={fld}
+                                allFolders={folders}
+                                allFiles={files}
+                                activeSemesterId={activeSemesterId}
+                                activeFolderId={activeFolderId}
+                                selectedFileId={selectedFileId}
+                                expandedFolders={expandedFolders}
+                                onToggleFolder={toggleFolderExpansion}
+                                onSelectFolder={handleSidebarSelectFolder}
+                                onSelectFile={handleSidebarSelectFile}
+                                depth={0}
+                              />
+                            ))}
+
+                            {/* Arquivos na raiz do semestre */}
+                            {semRootFiles.map((file) => {
+                              const isFileActive = selectedFileId === file.id;
+                              return (
+                                <div
+                                  key={file.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSidebarSelectFile(file);
+                                  }}
+                                  className={`group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 font-mono text-xs transition ${
+                                    isFileActive
+                                      ? "bg-[#c96726]/15 text-[#1a1614] dark:text-[#fafbf7] font-semibold border-l-2 border-[#c96726]"
+                                      : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
+                                  }`}
+                                  title={`${file.name} (${formatBytes(file.size)})`}
+                                >
+                                  <div className="flex min-w-0 items-center gap-1.5">
+                                    <FileCategoryIcon
+                                      category={file.category}
+                                      className="h-3.5 w-3.5 shrink-0"
+                                    />
+                                    <span className="truncate">{file.name}</span>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-1 pl-1.5">
+                                    {isFileActive ? (
+                                      <span
+                                        className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
+                                        title="Arquivo aberto no visualizador"
+                                      />
+                                    ) : (
+                                      <span className="font-mono text-[9px] uppercase tracking-wider text-[#736d67]/50 dark:text-[#9c968f]/50">
+                                        {file.extension}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {semFolders.length === 0 && semRootFiles.length === 0 && (
+                              <div className="px-2 py-1 text-[10px] font-mono italic text-[#736d67]/50 dark:text-[#9c968f]/50">
+                                (semestre vazio)
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <span className={`text-[10px] ${active ? "opacity-75" : "text-[#736d67]/60 dark:text-[#9c968f]/60"}`}>
-                        {semFoldersCount}p · {semFilesCount}a
-                      </span>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </div>
           </div>

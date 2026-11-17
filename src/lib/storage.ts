@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
-import { put, del, list } from "@vercel/blob";
+import { put, del, get } from "@vercel/blob";
 import { Database, FileItem, Semester } from "./types";
 import { getExtension, getFileCategory, getMimeFromExtension, slugify } from "./file-utils";
 
@@ -10,8 +10,48 @@ const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 const BLOB_DB_KEY = "acervo-meta/db.json";
 
+export type BlobAccess = "private" | "public";
+
+let cachedBlobAccess: BlobAccess =
+  process.env.BLOB_ACCESS === "public" ? "public" : "private";
+
 export function isCloudStorageEnabled(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+}
+
+export function getBlobAccess(): BlobAccess {
+  if (process.env.BLOB_ACCESS === "public") return "public";
+  if (process.env.BLOB_ACCESS === "private") return "private";
+  return cachedBlobAccess;
+}
+
+function flipBlobAccess(current: BlobAccess): BlobAccess {
+  const next: BlobAccess = current === "private" ? "public" : "private";
+  cachedBlobAccess = next;
+  return next;
+}
+
+function isAccessMismatchError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+  return (
+    msg.includes("access") &&
+    (msg.includes("public") || msg.includes("private"))
+  );
+}
+
+async function withBlobAccessRetry<T>(
+  fn: (access: BlobAccess) => Promise<T>
+): Promise<T> {
+  const first = getBlobAccess();
+  try {
+    return await fn(first);
+  } catch (err) {
+    if (!process.env.BLOB_ACCESS && isAccessMismatchError(err)) {
+      const second = flipBlobAccess(first);
+      return await fn(second);
+    }
+    throw err;
+  }
 }
 
 function getDefaultDb(): Database {
@@ -44,20 +84,18 @@ async function ensureLocalDirs(): Promise<void> {
 export async function readDb(): Promise<Database> {
   if (isCloudStorageEnabled()) {
     try {
-      const { blobs } = await list({ prefix: BLOB_DB_KEY, limit: 1 });
-      const metaBlob = blobs.find((b) => b.pathname === BLOB_DB_KEY);
-      if (!metaBlob) {
+      const result = await withBlobAccessRetry((access) =>
+        get(BLOB_DB_KEY, { access, useCache: false })
+      );
+
+      if (!result || result.statusCode !== 200 || !result.stream) {
         const initial = getDefaultDb();
         await writeDb(initial);
         return initial;
       }
-      const res = await fetch(`${metaBlob.url}?t=${Date.now()}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        return getDefaultDb();
-      }
-      const parsed = (await res.json()) as Database;
+
+      const text = await new Response(result.stream).text();
+      const parsed = JSON.parse(text) as Database;
       return {
         semesters: Array.isArray(parsed.semesters) ? parsed.semesters : [],
         files: Array.isArray(parsed.files) ? parsed.files : [],
@@ -86,12 +124,14 @@ export async function writeDb(db: Database): Promise<void> {
   const payload = JSON.stringify(db, null, 2);
 
   if (isCloudStorageEnabled()) {
-    await put(BLOB_DB_KEY, payload, {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-    });
+    await withBlobAccessRetry((access) =>
+      put(BLOB_DB_KEY, payload, {
+        access,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType: "application/json",
+      })
+    );
     return;
   }
 
@@ -192,20 +232,19 @@ export async function saveLocalFileAndRecord(params: {
     const category = getFileCategory(params.name, mimeType);
 
     let storageKey: string;
-    let url: string;
 
     if (isCloudStorageEnabled()) {
-      const blob = await put(`uploads/${params.semesterId}/${id}-${safeName}`, params.buffer, {
-        access: "public",
-        contentType: mimeType,
-      });
+      const blob = await withBlobAccessRetry((access) =>
+        put(`uploads/${params.semesterId}/${id}-${safeName}`, params.buffer, {
+          access,
+          contentType: mimeType,
+        })
+      );
       storageKey = blob.url;
-      url = blob.url;
     } else {
       await ensureLocalDirs();
       storageKey = `${id}-${safeName}`;
       await fs.writeFile(path.join(UPLOADS_DIR, storageKey), params.buffer);
-      url = `/api/files/${id}`;
     }
 
     const item: FileItem = {
@@ -216,7 +255,7 @@ export async function saveLocalFileAndRecord(params: {
       size: params.buffer.length,
       extension,
       category,
-      url,
+      url: `/api/files/${id}`,
       storageKey,
       createdAt: new Date().toISOString(),
     };
@@ -253,7 +292,7 @@ export async function registerCloudFileRecord(params: {
       size: params.size,
       extension,
       category,
-      url: params.url,
+      url: `/api/files/${id}`,
       storageKey: params.url,
       createdAt: new Date().toISOString(),
     };
@@ -262,6 +301,10 @@ export async function registerCloudFileRecord(params: {
     await writeDb(db);
     return item;
   });
+}
+
+export async function getCloudFileStream(storageKey: string) {
+  return withBlobAccessRetry((access) => get(storageKey, { access }));
 }
 
 export async function deleteFileRecord(fileId: string): Promise<boolean> {

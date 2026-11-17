@@ -38,6 +38,7 @@ interface ShowcaseAppProps {
   initialAuthenticated: boolean;
   usingDefaultPin: boolean;
   storageMode: "cloud" | "local";
+  blobAccess: "private" | "public";
 }
 
 function FileCategoryIcon({ category }: { category: FileCategory }) {
@@ -70,6 +71,7 @@ export default function ShowcaseApp({
   initialAuthenticated,
   usingDefaultPin,
   storageMode,
+  blobAccess,
 }: ShowcaseAppProps) {
   const [semesters, setSemesters] = useState<Semester[]>(initialSemesters);
   const [files, setFiles] = useState<FileItem[]>(initialFiles);
@@ -187,14 +189,26 @@ export default function ShowcaseApp({
 
       if (storageMode === "cloud") {
         const safeName = rawFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const blob = await blobUpload(
-          `uploads/${activeSemesterId}/${Date.now()}-${safeName}`,
-          rawFile,
-          {
-            access: "public",
+        const pathname = `uploads/${activeSemesterId}/${Date.now()}-${safeName}`;
+
+        let blob;
+        try {
+          blob = await blobUpload(pathname, rawFile, {
+            access: blobAccess,
             handleUploadUrl: "/api/blob-upload",
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message.toLowerCase() : "";
+          if (msg.includes("access")) {
+            const fallbackAccess = blobAccess === "private" ? "public" : "private";
+            blob = await blobUpload(pathname, rawFile, {
+              access: fallbackAccess,
+              handleUploadUrl: "/api/blob-upload",
+            });
+          } else {
+            throw err;
           }
-        );
+        }
 
         const res = await fetch("/api/upload", {
           method: "POST",

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
   deleteFileRecord,
+  getCloudFileStream,
   getFileById,
   resolveLocalUploadPath,
 } from "@/lib/storage";
@@ -23,11 +24,35 @@ export async function GET(
       );
     }
 
+    const isDownload = req.nextUrl.searchParams.get("download") === "1";
+    const encodedName = encodeURIComponent(file.name);
+    const disposition = isDownload
+      ? `attachment; filename*=UTF-8''${encodedName}`
+      : `inline; filename*=UTF-8''${encodedName}`;
+
     if (
       file.storageKey.startsWith("http://") ||
       file.storageKey.startsWith("https://")
     ) {
-      return NextResponse.redirect(file.url);
+      const result = await getCloudFileStream(file.storageKey);
+      if (!result || result.statusCode !== 200 || !result.stream) {
+        return NextResponse.json(
+          { error: "Arquivo não encontrado no armazenamento." },
+          { status: 404 }
+        );
+      }
+
+      return new NextResponse(result.stream, {
+        status: 200,
+        headers: {
+          "Content-Type":
+            result.blob.contentType ||
+            file.mimeType ||
+            "application/octet-stream",
+          "Content-Disposition": disposition,
+          "Cache-Control": "private, max-age=3600",
+        },
+      });
     }
 
     const filePath = resolveLocalUploadPath(file.storageKey);
@@ -42,12 +67,6 @@ export async function GET(
         { status: 404 }
       );
     }
-
-    const isDownload = req.nextUrl.searchParams.get("download") === "1";
-    const encodedName = encodeURIComponent(file.name);
-    const disposition = isDownload
-      ? `attachment; filename*=UTF-8''${encodedName}`
-      : `inline; filename*=UTF-8''${encodedName}`;
 
     const range = req.headers.get("range");
     if (range) {

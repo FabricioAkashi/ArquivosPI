@@ -1,6 +1,6 @@
 import React from "react";
 import { isAdminAuthenticated, isUsingDefaultPin } from "@/lib/auth";
-import { isCloudStorageEnabled, readDb } from "@/lib/storage";
+import { getBlobAccess, isCloudStorageEnabled, readDb } from "@/lib/storage";
 import ShowcaseApp from "@/components/ShowcaseApp";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       initialAuthenticated={authenticated}
       usingDefaultPin={isUsingDefaultPin()}
       storageMode={isCloudStorageEnabled() ? "cloud" : "local"}
+      blobAccess={getBlobAccess()}
     />
   );
 }

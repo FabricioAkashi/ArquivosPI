@@ -10,7 +10,7 @@
     "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
-    "@vercel/blob": "^1.1.0",
+    "@vercel/blob": "^2.9.0",
     "chart.js": "^4.6.1",
     "docx-preview": "^0.3.3",
     "jszip": "^3.10.1",

@@ -41,7 +41,6 @@ import SemesterModal from "./SemesterModal";
 import FolderModal from "./FolderModal";
 import ThemeToggle from "./ThemeToggle";
 import DocumentPreview from "./DocumentPreview";
-import FolderCarousel from "./FolderCarousel";
 import ConfirmModal, { ConfirmDialogState } from "./ConfirmModal";
 
 interface ShowcaseAppProps {
@@ -966,59 +965,29 @@ export default function ShowcaseApp({
                     Selecione um semestre para acessar as pastas de projetos, relatórios e apresentações.
                   </p>
 
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                     {semesters.map((sem) => {
-                      const semFiles = files.filter((f) => f.semesterId === sem.id);
+                      const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
                       const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
 
                       return (
                         <div
                           key={sem.id}
-                          className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                          onClick={() => {
+                            setActiveSemesterId(sem.id);
+                            setActiveFolderId(null);
+                          }}
+                          className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
                         >
-                          <div className="flex items-center justify-between">
-                            <div
-                              onClick={() => {
-                                setActiveSemesterId(sem.id);
-                                setActiveFolderId(null);
-                              }}
-                              className="group flex cursor-pointer items-center gap-3 min-w-0"
-                            >
-                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
                                 <FolderIcon className="h-6 w-6" />
                               </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="truncate text-base font-bold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
-                                    {sem.name}
-                                  </h3>
-                                  <span className="text-xs text-neutral-400">—</span>
-                                  <p className="truncate text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                                    {sem.title || "Projeto Integrador"}
-                                  </p>
-                                </div>
-                                <p className="text-[11px] text-neutral-400">
-                                  {semFoldersCount} pasta(s) · {semFiles.length} arquivo(s)
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveSemesterId(sem.id);
-                                  setActiveFolderId(null);
-                                }}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800/70 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                              >
-                                <span>Abrir Semestre</span>
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              </button>
 
                               {isAdmin && (
                                 <div
-                                  className="flex items-center gap-1"
+                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <button
@@ -1043,13 +1012,19 @@ export default function ShowcaseApp({
                                 </div>
                               )}
                             </div>
+
+                            <h3 className="mt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                              {sem.name}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
+                              {sem.title || "Projeto Integrador"}
+                            </p>
                           </div>
 
-                          {/* Carrossel de Pré-visualização dos Arquivos deste Semestre (se não houver arquivos, não aparece) */}
-                          <FolderCarousel
-                            files={semFiles}
-                            onSelectFile={(id) => setSelectedFileId(id)}
-                          />
+                          <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] text-neutral-400 dark:border-neutral-800/60">
+                            <span>{semFoldersCount} pasta(s)</span>
+                            <span>{semFilesCount} arquivo(s)</span>
+                          </div>
                         </div>
                       );
                     })}
@@ -1066,94 +1041,59 @@ export default function ShowcaseApp({
                       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
                         Pastas ({currentSubfolders.length})
                       </h2>
-                      <div className="space-y-3.5">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                         {currentSubfolders.map((fld) => {
-                          const subFiles = files.filter((f) => f.folderId === fld.id);
+                          const subFilesCount = files.filter((f) => f.folderId === fld.id).length;
                           return (
                             <div
                               key={fld.id}
-                              className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                              onClick={() => setActiveFolderId(fld.id)}
+                              className="group flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
                             >
-                              <div className="flex items-center justify-between">
-                                <div
-                                  onClick={() => setActiveFolderId(fld.id)}
-                                  className="group flex cursor-pointer items-center gap-3 min-w-0"
-                                >
-                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
-                                    <FolderIcon className="h-5 w-5" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <p className="truncate text-sm font-semibold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
-                                        {fld.name}
-                                      </p>
-                                      <ChevronRight className="h-4 w-4 text-neutral-400 transition group-hover:translate-x-0.5" />
-                                    </div>
-                                    <p className="text-[11px] text-neutral-400">
-                                      {subFiles.length} arquivo(s)
-                                    </p>
-                                  </div>
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
+                                  <FolderIcon className="h-5 w-5" />
                                 </div>
-
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => setActiveFolderId(fld.id)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                                  >
-                                    <span>Abrir</span>
-                                    <ChevronRight className="h-3 w-3" />
-                                  </button>
-
-                                  {isAdmin && (
-                                    <div
-                                      className="flex items-center gap-1"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingFolder(fld);
-                                          setFolderModalOpen(true);
-                                        }}
-                                        className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                                        title="Renomear pasta"
-                                      >
-                                        <Edit3 className="h-3.5 w-3.5" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => handleDeleteFolder(e, fld)}
-                                        className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-                                        title="Excluir pasta"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
-                                    </div>
-                                  )}
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
+                                    {fld.name}
+                                  </p>
+                                  <p className="text-[11px] text-neutral-400">
+                                    {subFilesCount} arquivo(s)
+                                  </p>
                                 </div>
                               </div>
 
-                              {/* Carrossel de Pré-visualização de Arquivos da Subpasta (se não houver arquivos, não aparece) */}
-                              <FolderCarousel
-                                files={subFiles}
-                                onSelectFile={(id) => setSelectedFileId(id)}
-                              />
+                              {isAdmin && (
+                                <div
+                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingFolder(fld);
+                                      setFolderModalOpen(true);
+                                    }}
+                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                    title="Renomear pasta"
+                                  >
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteFolder(e, fld)}
+                                    className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                    title="Excluir pasta"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Carrossel de Pré-visualização da Pasta Aberta (se não houver arquivos, não aparece) */}
-                  {currentLevelFiles.length > 0 && (
-                    <div className="rounded-2xl border border-neutral-200/90 bg-white/80 p-4 shadow-xs backdrop-blur-xs dark:border-neutral-800 dark:bg-neutral-900/60">
-                      <FolderCarousel
-                        files={currentLevelFiles}
-                        onSelectFile={(id) => setSelectedFileId(id)}
-                        title={`Carrossel de Arquivos — ${activeFolder ? activeFolder.name : activeSemester?.name}`}
-                      />
                     </div>
                   )}
 

@@ -191,42 +191,47 @@ export default function ShowcaseApp({
         const safeName = rawFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const pathname = `uploads/${activeSemesterId}/${Date.now()}-${safeName}`;
 
-        let blob;
         try {
-          blob = await blobUpload(pathname, rawFile, {
+          const blob = await blobUpload(pathname, rawFile, {
             access: blobAccess,
             handleUploadUrl: "/api/blob-upload",
           });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message.toLowerCase() : "";
-          if (msg.includes("access")) {
-            const fallbackAccess = blobAccess === "private" ? "public" : "private";
-            blob = await blobUpload(pathname, rawFile, {
-              access: fallbackAccess,
-              handleUploadUrl: "/api/blob-upload",
-            });
-          } else {
-            throw err;
+
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              semesterId: activeSemesterId,
+              name: rawFile.name,
+              mimeType: rawFile.type,
+              size: rawFile.size,
+              url: blob.url,
+            }),
+          });
+
+          const data = (await res.json()) as { file?: FileItem; error?: string };
+          if (!res.ok || !data.file) {
+            throw new Error(data.error || "Erro ao registrar arquivo.");
           }
-        }
+          return data.file;
+        } catch (clientErr) {
+          console.warn("Client blob upload failed, falling back to server upload:", clientErr);
+          // Fallback automático para upload via servidor
+          const formData = new FormData();
+          formData.append("file", rawFile);
+          formData.append("semesterId", activeSemesterId);
 
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            semesterId: activeSemesterId,
-            name: rawFile.name,
-            mimeType: rawFile.type,
-            size: rawFile.size,
-            url: blob.url,
-          }),
-        });
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
 
-        const data = (await res.json()) as { file?: FileItem; error?: string };
-        if (!res.ok || !data.file) {
-          throw new Error(data.error || "Erro ao registrar arquivo.");
+          const data = (await res.json()) as { file?: FileItem; error?: string };
+          if (!res.ok || !data.file) {
+            throw new Error(data.error || `Erro ao enviar ${rawFile.name}`);
+          }
+          return data.file;
         }
-        return data.file;
       }
 
       const formData = new FormData();

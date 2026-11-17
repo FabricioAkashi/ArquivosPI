@@ -4,9 +4,9 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import { isCloudStorageEnabled } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
-  if (!isCloudStorageEnabled()) {
+  if (!isCloudStorageEnabled() || !process.env.BLOB_READ_WRITE_TOKEN) {
     return NextResponse.json(
-      { error: "Vercel Blob não configurado." },
+      { error: "Vercel Blob ou BLOB_READ_WRITE_TOKEN não configurado." },
       { status: 400 }
     );
   }

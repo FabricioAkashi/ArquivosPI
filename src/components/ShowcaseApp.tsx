@@ -20,17 +20,13 @@ import {
   LayoutGrid,
   List,
   Loader2,
-  Lock,
   MoreVertical,
   Music,
-  PanelLeftClose,
-  PanelLeftOpen,
   Plus,
   Presentation,
   QrCode,
   Search,
   Trash2,
-  Unlock,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -49,6 +45,7 @@ import ExpandingSearch, { ExpandingSearchItem } from "./arc/ExpandingSearch";
 import ExpandingButtonGroup from "./arc/ExpandingButtonGroup";
 import DropdownMenu, { DropdownMenuItem } from "./arc/DropdownMenu";
 import ContextMenu, { ContextMenuItem } from "./arc/ContextMenu";
+import SiteHeader, { SiteHeaderBreadcrumb, SiteHeaderQuickLink } from "./arc/SiteHeader";
 
 interface ShowcaseAppProps {
   initialSemesters: Semester[];
@@ -522,6 +519,7 @@ export default function ShowcaseApp({
   };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const explorerScrollRef = useRef<HTMLDivElement | null>(null);
   const dragDepthRef = useRef(0);
 
   // Sincronização limpa de URL
@@ -736,6 +734,78 @@ export default function ShowcaseApp({
     () => files.find((f) => f.id === selectedFileId) || null,
     [files, selectedFileId]
   );
+
+  // Dados estruturados para o SiteHeader (@uiarc/site-header)
+  const lockedScopeLabel = useMemo(() => {
+    if (initialScope === "folder" && activeFolder) return `PASTA: ${activeFolder.name}`;
+    if (initialScope === "semester" && activeSemester) return `SEMESTRE: ${activeSemester.name}`;
+    return "ACESSO RESTRITO";
+  }, [initialScope, activeFolder, activeSemester]);
+
+  const headerBreadcrumbs: SiteHeaderBreadcrumb[] = useMemo(() => {
+    const list: SiteHeaderBreadcrumb[] = [];
+
+    if (!isLockedScope || isAdmin) {
+      list.push({
+        id: "home",
+        label: "INÍCIO",
+        active: !activeSemester && !selectedFile,
+        onClick: () => {
+          setActiveSemesterId(null);
+          setActiveFolderId(null);
+          setSelectedFileId(null);
+        },
+      });
+    }
+
+    if ((!isLockedScope || isAdmin || initialScope !== "folder") && activeSemester) {
+      const canClickSemester = !(isLockedScope && !isAdmin && initialScope === "folder");
+      list.push({
+        id: `sem-${activeSemester.id}`,
+        label: activeSemester.name.toUpperCase(),
+        active: !activeFolder && !selectedFile,
+        onClick: canClickSemester
+          ? () => {
+              setActiveFolderId(null);
+              setSelectedFileId(null);
+            }
+          : undefined,
+      });
+    }
+
+    if (activeFolder) {
+      list.push({
+        id: `fld-${activeFolder.id}`,
+        label: activeFolder.name.toUpperCase(),
+        active: !selectedFile,
+        onClick: () => setSelectedFileId(null),
+      });
+    }
+
+    if (selectedFile) {
+      list.push({
+        id: `file-${selectedFile.id}`,
+        label: selectedFile.name,
+        active: true,
+      });
+    }
+
+    return list;
+  }, [isLockedScope, isAdmin, initialScope, activeSemester, activeFolder, selectedFile]);
+
+  const headerQuickLinks: SiteHeaderQuickLink[] = useMemo(() => {
+    if (isLockedScope && !isAdmin) return [];
+    return semesters.map((sem) => ({
+      id: sem.id,
+      label: sem.name,
+      active: sem.id === activeSemesterId,
+      onSelect: () => {
+        setActiveSemesterId(sem.id);
+        setActiveFolderId(null);
+        setSelectedFileId(null);
+      },
+    }));
+  }, [semesters, activeSemesterId, isLockedScope, isAdmin]);
 
   // Navegação entre arquivos
   const fileListForNavigation = useMemo(() => {
@@ -1007,182 +1077,41 @@ export default function ShowcaseApp({
         </div>
       )}
 
-      {/* Top Navbar Antimetal Aesthetic */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#1a1614]/10 bg-[#f5f6f1]/80 px-3 sm:px-5 backdrop-blur-md dark:border-white/10 dark:bg-[#161311]/80">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3.5">
-          {/* Botão de abrir/fechar a barra lateral com animação */}
-          <button
-            type="button"
-            onClick={() => setSidebarOpen((open) => !open)}
-            className="inline-flex h-8.5 w-8.5 items-center justify-center rounded-full border border-[#1a1614]/15 bg-white/60 text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/60 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
-            title={sidebarOpen ? "Recolher painel lateral" : "Abrir painel lateral"}
-            aria-label="Alternar painel lateral"
-          >
-            {sidebarOpen ? (
-              <PanelLeftClose className="h-4 w-4" />
-            ) : (
-              <PanelLeftOpen className="h-4 w-4" />
-            )}
-          </button>
-
-          {/* Antimetal Brand Tile */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveSemesterId(null);
-              setActiveFolderId(null);
-              setSelectedFileId(null);
-            }}
-            className="flex items-center gap-2 rounded-xl border border-[#1a1614]/10 bg-white/70 px-2.5 py-1.5 shadow-2xs transition hover:bg-white dark:border-white/10 dark:bg-[#201c19]/70 dark:hover:bg-[#201c19]"
-            title="Ir para o início"
-          >
-            <DotMatrixIcon className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
-            <span className="font-semibold text-xs tracking-tight text-[#1a1614] dark:text-[#fafbf7]">
-              Acervo PI
-            </span>
-            <span className="hidden sm:inline-block rounded bg-[#6d8352]/10 px-1 py-0.2 font-mono text-[9px] font-bold uppercase text-[#55693e] dark:text-[#8ea573]">
-              v2.0
-            </span>
-          </button>
-
-          {/* Monospace Separator */}
-          <span className="text-[#1a1614]/25 dark:text-white/25 font-mono text-xs select-none">/</span>
-
-          {/* Breadcrumbs de Navegação estilo Explorador */}
-          <nav className="flex min-w-0 items-center gap-1.5 font-mono text-xs">
-            {isLockedScope && !isAdmin ? (
-              <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
-                <Lock className="h-3 w-3 shrink-0" />
-                <span className="truncate">
-                  {initialScope === "folder" && activeFolder
-                    ? `PASTA: ${activeFolder.name}`
-                    : initialScope === "semester" && activeSemester
-                    ? `SEMESTRE: ${activeSemester.name}`
-                    : "ACESSO RESTRITO"}
-                </span>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveSemesterId(null);
-                  setActiveFolderId(null);
-                  setSelectedFileId(null);
-                }}
-                className={`truncate font-medium transition ${
-                  !activeSemester
-                    ? "text-[#1a1614] dark:text-[#fafbf7] font-semibold"
-                    : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
-                }`}
-              >
-                <span>INÍCIO</span>
-              </button>
-            )}
-
-            {(!isLockedScope || isAdmin || initialScope !== "folder") && activeSemester && (
-              <>
-                <span className="text-[#1a1614]/25 dark:text-white/25">/</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isLockedScope && !isAdmin && initialScope === "folder") return;
-                    setActiveFolderId(null);
-                    setSelectedFileId(null);
-                  }}
-                  className={`truncate font-medium transition ${
-                    !activeFolder && !selectedFile
-                      ? "text-[#1a1614] dark:text-[#fafbf7] font-semibold"
-                      : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
-                  }`}
-                >
-                  {activeSemester.name.toUpperCase()}
-                </button>
-              </>
-            )}
-
-            {activeFolder && (
-              <>
-                <span className="text-[#1a1614]/25 dark:text-white/25">/</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedFileId(null)}
-                  className={`truncate font-medium transition ${
-                    !selectedFile
-                      ? "text-[#1a1614] dark:text-[#fafbf7] font-semibold"
-                      : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
-                  }`}
-                >
-                  {activeFolder.name.toUpperCase()}
-                </button>
-              </>
-            )}
-
-            {selectedFile && (
-              <>
-                <span className="text-[#1a1614]/25 dark:text-white/25">/</span>
-                <span className="truncate font-semibold text-[#1a1614] dark:text-[#fafbf7]">
-                  {selectedFile.name}
-                </span>
-              </>
-            )}
-
-            {isLockedScope && isAdmin && (
-              <button
-                type="button"
-                onClick={() => setIsLockedScope(false)}
-                className="ml-2 hidden sm:inline-flex items-center gap-1 rounded-md bg-[#1a1614]/5 px-2 py-0.5 text-[10px] font-mono text-[#736d67] transition hover:bg-[#1a1614]/10 dark:bg-white/10 dark:text-[#9c968f]"
-                title="Você é admin: clique para liberar a visualização de todo o acervo"
-              >
-                <span>DESBLOQUEAR TUDO</span>
-              </button>
-            )}
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setQrScope(selectedFile ? "file" : activeFolder ? "folder" : activeSemester ? "semester" : "all");
-              setQrOpen(true);
-            }}
-            className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
-            title="Gerar QR Code de acesso"
-          >
-            <QrCode className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
-            <span className="hidden sm:inline">QR CODE</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleLockToggle}
-            className={`inline-flex h-8.5 items-center gap-1.5 rounded-full px-3.5 font-mono text-xs font-medium transition shadow-2xs ${
-              isAdmin
-                ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
-                : "border border-[#1a1614]/15 bg-white/70 text-[#1a1614] hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
-            }`}
-            title={
-              isAdmin
-                ? "Modo edição ativo (clique para bloquear)"
-                : "Desbloquear uploads e pastas"
-            }
-          >
-            {isAdmin ? (
-              <>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="hidden sm:inline">EDITANDO</span>
-              </>
-            ) : (
-              <>
-                <Lock className="h-3.5 w-3.5 text-[#736d67] dark:text-[#9c968f]" />
-                <span className="hidden sm:inline">GERENCIAR</span>
-              </>
-            )}
-          </button>
-
-          <ThemeToggle />
-        </div>
-      </header>
+      {/* Top Navbar (@uiarc/site-header + Antimetal Aesthetic) */}
+      <SiteHeader
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((open) => !open)}
+        onGoHome={() => {
+          if (isLockedScope && !isAdmin) return;
+          setActiveSemesterId(null);
+          setActiveFolderId(null);
+          setSelectedFileId(null);
+        }}
+        breadcrumbs={headerBreadcrumbs}
+        quickLinks={headerQuickLinks}
+        isLockedScope={isLockedScope}
+        lockedLabel={lockedScopeLabel}
+        isAdmin={isAdmin}
+        onUnlockAllScope={() => setIsLockedScope(false)}
+        onOpenQr={() => {
+          setQrScope(
+            selectedFile
+              ? "file"
+              : activeFolder
+              ? "folder"
+              : activeSemester
+              ? "semester"
+              : "all"
+          );
+          setQrOpen(true);
+        }}
+        onToggleAdmin={handleLockToggle}
+        themeToggle={<ThemeToggle />}
+        brandMark={
+          <DotMatrixIcon className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+        }
+        scrollContainer={explorerScrollRef}
+      />
 
       {/* Main Body */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -1568,16 +1497,17 @@ export default function ShowcaseApp({
             /* Modo 1: Visualizador de Arquivo em Tela Cheia */
             <div className="flex h-full flex-col">
               {/* Botão de retorno superior */}
-              <div className="flex items-center justify-between border-b border-[#1a1614]/10 bg-white/70 px-4 py-2.5 text-xs backdrop-blur-md dark:border-white/10 dark:bg-[#201c19]/70">
+              <div className="flex items-center justify-between gap-3 border-b border-[#1a1614]/10 bg-white/70 px-3 sm:px-4 py-2.5 text-xs backdrop-blur-md dark:border-white/10 dark:bg-[#201c19]/70">
                 <button
                   type="button"
                   onClick={() => setSelectedFileId(null)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/80 px-3.5 py-1.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/80 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/80 px-3 sm:px-3.5 py-1.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/80 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
-                  <span>VOLTAR PARA ARQUIVOS</span>
+                  <span className="sm:hidden">VOLTAR</span>
+                  <span className="hidden sm:inline">VOLTAR PARA ARQUIVOS</span>
                 </button>
-                <span className="truncate font-mono text-xs text-[#736d67] dark:text-[#9c968f]">
+                <span className="truncate font-mono text-[11px] sm:text-xs text-[#736d67] dark:text-[#9c968f]">
                   {activeSemester?.name.toUpperCase()} {activeFolder ? `› ${activeFolder.name.toUpperCase()}` : ""}
                 </span>
               </div>
@@ -1600,7 +1530,7 @@ export default function ShowcaseApp({
             </div>
           ) : (
             /* Modo 2: Explorador de Pastas e Arquivos */
-            <div className="flex h-full flex-col overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <div ref={explorerScrollRef} className="flex h-full flex-col overflow-y-auto p-4 sm:p-6 lg:p-8">
               {/* Toolbar e Ações do Explorador */}
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">

@@ -53,58 +53,65 @@ export default function PinModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xs rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+        className="w-full max-w-sm rounded-3xl border border-[#1a1614]/15 bg-white/95 p-6 shadow-2xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-neutral-500" />
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-              Desbloquear Edição
-            </h3>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#c96726]/10 text-[#c96726] dark:bg-[#d77435]/15 dark:text-[#d77435]">
+              <Lock className="h-4 w-4" />
+            </div>
+            <div>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                SEGURANÇA
+              </span>
+              <h3 className="font-serif text-lg font-normal text-[#1a1614] dark:text-[#fafbf7]">
+                Desbloquear Edição
+              </h3>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 dark:text-[#9c968f] dark:hover:bg-white/5"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+        <p className="mt-3 text-xs leading-relaxed text-[#736d67] dark:text-[#9c968f]">
           Digite o PIN de administrador para enviar, organizar ou excluir arquivos.
         </p>
 
         {usingDefaultPin && (
-          <p className="mt-2 rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[11px] text-neutral-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400">
-            PIN padrão ativo: <span className="font-mono font-semibold">1234</span>{" "}
-            (defina <code className="font-mono">ADMIN_PIN</code> no deploy).
+          <p className="mt-2.5 rounded-xl border border-dashed border-[#1a1614]/15 bg-[#f5f6f1] px-3 py-2 font-mono text-[11px] text-[#736d67] dark:border-white/10 dark:bg-[#161311] dark:text-[#9c968f]">
+            PIN padrão ativo: <span className="font-bold text-[#c96726] dark:text-[#d77435]">1234</span>{" "}
+            (defina <code>ADMIN_PIN</code> no deploy).
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-3">
           <input
             type="password"
             autoFocus
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            placeholder="PIN de acesso"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:focus:border-neutral-400"
+            placeholder="PIN de acesso..."
+            className="w-full rounded-full border border-[#1a1614]/15 bg-[#f5f6f1] px-4 py-2.5 font-mono text-sm text-[#1a1614] outline-none transition focus:border-[#c96726] dark:border-white/15 dark:bg-[#161311] dark:text-[#fafbf7] dark:focus:border-[#d77435]"
           />
 
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p className="font-mono text-xs text-rose-500">{error}</p>}
 
           <button
             type="submit"
             disabled={loading || !pin}
-            className="w-full rounded-lg bg-neutral-900 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+            className="w-full rounded-full bg-[#1a1614] py-2.5 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 disabled:opacity-50 dark:bg-[#fafbf7] dark:text-[#1a1614]"
           >
-            {loading ? "Verificando..." : "Entrar no modo edição"}
+            {loading ? "VERIFICANDO..." : "ENTRAR NO MODO EDIÇÃO"}
           </button>
         </form>
       </div>

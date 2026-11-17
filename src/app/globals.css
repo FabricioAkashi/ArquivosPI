@@ -2,6 +2,35 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --paper: #f5f6f1;
+  --paper-surface: #ffffff;
+  --paper-surface-muted: #ebece5;
+  --ink: #1a1614;
+  --ink-muted: #736d67;
+  --border-subtle: rgba(26, 22, 20, 0.08);
+  --border-dashed: rgba(26, 22, 20, 0.14);
+  --accent-copper: #c96726;
+  --accent-green: #6d8352;
+  --accent-lime: #899200;
+  --font-serif: "Newsreader", "Test Signifier", "Georgia", "Ivar Text", serif;
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+}
+
+html.dark {
+  --paper: #161311;
+  --paper-surface: #201c19;
+  --paper-surface-muted: #282421;
+  --ink: #fafbf7;
+  --ink-muted: #9c968f;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-dashed: rgba(255, 255, 255, 0.12);
+  --accent-copper: #d77435;
+  --accent-green: #7f9564;
+  --accent-lime: #bdc848;
+}
+
 @layer base {
   html {
     color-scheme: light;
@@ -10,14 +39,31 @@
     color-scheme: dark;
   }
   body {
-    @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
+  h1, h2, h3, .font-editorial {
+    font-family: var(--font-serif);
+  }
+}
+
+/* Subtle dot-matrix pattern inspired by Antimetal */
+.antimetal-dots {
+  background-image: radial-gradient(rgba(26, 22, 20, 0.12) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+html.dark .antimetal-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 }
 
 /* Custom subtle scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -25,12 +71,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(115, 115, 115, 0.3);
+  background: rgba(115, 115, 115, 0.25);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(115, 115, 115, 0.5);
+  background: rgba(115, 115, 115, 0.45);
 }
 
 /* docx-preview overrides so documents render crisply on paper background */

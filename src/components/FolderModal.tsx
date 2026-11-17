@@ -76,32 +76,34 @@ export default function FolderModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+        className="w-full max-w-sm rounded-3xl border border-[#1a1614]/15 bg-white/95 p-6 shadow-2xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderPlus className="h-4 w-4 text-neutral-500" />
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+        <div className="flex items-center justify-between border-b border-dashed border-[#1a1614]/15 pb-3 dark:border-white/10">
+          <div>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+              02 / PASTA
+            </span>
+            <h3 className="font-serif text-lg font-normal text-[#1a1614] dark:text-[#fafbf7]">
               {editingFolder ? "Renomear Pasta" : "Nova Pasta"}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 dark:text-[#9c968f] dark:hover:bg-white/5"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            <label className="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
               Nome da Pasta *
             </label>
             <input
@@ -110,27 +112,27 @@ export default function FolderModal({
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Relatórios, Slides, Documentação"
-              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:focus:border-neutral-400"
+              placeholder="Ex: Relatórios, Slides, Documentação..."
+              className="w-full rounded-2xl border border-[#1a1614]/15 bg-[#f5f6f1] px-3.5 py-2 text-sm text-[#1a1614] outline-none transition focus:border-[#c96726] dark:border-white/15 dark:bg-[#161311] dark:text-[#fafbf7] dark:focus:border-[#d77435]"
             />
           </div>
 
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p className="font-mono text-xs text-rose-500">{error}</p>}
 
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex justify-end gap-2 pt-2 border-t border-dashed border-[#1a1614]/15 dark:border-white/10">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="rounded-full border border-[#1a1614]/15 bg-white/80 px-4 py-1.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#161311]/80 dark:text-[#fafbf7] dark:hover:bg-[#161311]"
             >
-              Cancelar
+              CANCELAR
             </button>
             <button
               type="submit"
               disabled={loading || !name.trim()}
-              className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+              className="rounded-full bg-[#1a1614] px-5 py-1.5 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 disabled:opacity-50 dark:bg-[#fafbf7] dark:text-[#1a1614]"
             >
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? "SALVANDO..." : "SALVAR"}
             </button>
           </div>
         </form>

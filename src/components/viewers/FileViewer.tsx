@@ -133,60 +133,60 @@ export default function FileViewer({
   return (
     <div
       ref={wrapperRef}
-      className={`flex flex-col bg-white dark:bg-neutral-950 ${
+      className={`flex flex-col bg-[#f5f6f1] text-[#1a1614] dark:bg-[#161311] dark:text-[#fafbf7] ${
         isFullscreen
           ? "fixed inset-0 z-[100] h-[100dvh] w-screen overflow-hidden"
           : "relative h-full overflow-hidden"
       }`}
     >
       {/* Top File Header */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-neutral-200 px-3 py-2 sm:px-4 sm:py-2.5 dark:border-neutral-800">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#1a1614]/10 bg-white/80 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur-md dark:border-white/10 dark:bg-[#201c19]/80">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* Main Navigation Arrows (Enlarged & accessible for mobile + desktop) */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               disabled={!hasPrev}
               onClick={onPrev}
-              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700 shadow-xs transition hover:bg-neutral-100 disabled:opacity-30 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 sm:h-9.5 sm:w-9.5 items-center justify-center rounded-full border border-[#1a1614]/15 bg-white/70 text-[#1a1614] shadow-2xs transition hover:bg-white disabled:opacity-30 dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
               title="Arquivo anterior (←)"
               aria-label="Arquivo anterior"
             >
-              <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+              <ChevronLeft className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
             </button>
             <button
               type="button"
               disabled={!hasNext}
               onClick={onNext}
-              className="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-700 shadow-xs transition hover:bg-neutral-100 disabled:opacity-30 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 sm:h-9.5 sm:w-9.5 items-center justify-center rounded-full border border-[#1a1614]/15 bg-white/70 text-[#1a1614] shadow-2xs transition hover:bg-white disabled:opacity-30 dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
               title="Próximo arquivo (→)"
               aria-label="Próximo arquivo"
             >
-              <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+              <ChevronRight className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
             </button>
           </div>
 
           <div className="min-w-0">
-            <h2 className="truncate text-xs sm:text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+            <h2 className="truncate font-sans text-xs sm:text-sm font-semibold text-[#1a1614] dark:text-[#fafbf7]">
               {file.name}
             </h2>
-            <p className="text-[10px] sm:text-[11px] text-neutral-500 dark:text-neutral-400">
-              {file.extension.toUpperCase() || "ARQUIVO"} · {formatBytes(file.size)}
+            <p className="font-mono text-[10px] sm:text-[11px] text-[#736d67] dark:text-[#9c968f]">
+              <span className="font-bold text-[#c96726] dark:text-[#d77435]">{file.extension.toUpperCase() || "ARQUIVO"}</span> · {formatBytes(file.size)}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-1.5">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Timer widget */}
           {showTimer && (
-            <div className="mr-1 flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs font-mono dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-neutral-800 dark:text-neutral-200">
+            <div className="mr-1 flex items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-[#f5f6f1] px-3 py-1 font-mono text-xs dark:border-white/15 dark:bg-[#161311]">
+              <span className="font-bold text-[#1a1614] dark:text-[#fafbf7]">
                 {formattedTime}
               </span>
               <button
                 type="button"
                 onClick={() => setTimerRunning((r) => !r)}
-                className="rounded p-0.5 text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                className="rounded-full p-0.5 text-[#736d67] hover:bg-[#1a1614]/10 dark:text-[#9c968f] dark:hover:bg-white/10"
                 title={timerRunning ? "Pausar" : "Iniciar"}
               >
                 {timerRunning ? (
@@ -201,7 +201,7 @@ export default function FileViewer({
                   setTimerRunning(false);
                   setSeconds(0);
                 }}
-                className="rounded p-0.5 text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                className="rounded-full p-0.5 text-[#736d67] hover:bg-[#1a1614]/10 dark:text-[#9c968f] dark:hover:bg-white/10"
                 title="Zerar cronômetro"
               >
                 <RotateCcw className="h-3 w-3" />
@@ -212,24 +212,24 @@ export default function FileViewer({
           <button
             type="button"
             onClick={() => setShowTimer((t) => !t)}
-            className={`inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-lg px-2 sm:px-2.5 text-xs font-medium transition ${
+            className={`inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full px-3 font-mono text-xs font-medium transition ${
               showTimer
-                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                : "border border-[#1a1614]/15 bg-white/70 text-[#1a1614] hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             }`}
             title="Cronômetro de apresentação"
           >
-            <Timer className="h-4 w-4" />
-            <span className="hidden md:inline">Tempo</span>
+            <Timer className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+            <span className="hidden md:inline">TEMPO</span>
           </button>
 
           <button
             type="button"
             onClick={onOpenQr}
-            className="inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-2 sm:px-2.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+            className="inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title="Gerar QR Code deste arquivo"
           >
-            <QrCode className="h-4 w-4" />
+            <QrCode className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
             <span className="hidden sm:inline">QR</span>
           </button>
 
@@ -238,32 +238,32 @@ export default function FileViewer({
             download={file.name}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-2 sm:px-2.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+            className="inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title="Baixar arquivo"
           >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Baixar</span>
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">BAIXAR</span>
           </a>
 
           <button
             type="button"
             onClick={toggleFullscreen}
-            className={`inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-lg border px-2 sm:px-3 text-xs font-medium transition ${
+            className={`inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full px-3.5 font-mono text-xs font-medium transition shadow-xs ${
               isFullscreen
-                ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
-                : "border-neutral-200 text-neutral-800 hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                ? "bg-[#c96726] text-white dark:bg-[#d77435]"
+                : "bg-[#1a1614] text-[#fafbf7] hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
             }`}
             title="Modo apresentação / Tela cheia (F)"
           >
             {isFullscreen ? (
               <>
-                <Minimize2 className="h-4 w-4" />
-                <span className="font-medium">Sair</span>
+                <Minimize2 className="h-3.5 w-3.5" />
+                <span className="font-medium">SAIR</span>
               </>
             ) : (
               <>
-                <Maximize2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Apresentar</span>
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">APRESENTAR</span>
               </>
             )}
           </button>
@@ -277,7 +277,7 @@ export default function FileViewer({
           <button
             type="button"
             onClick={onPrev}
-            className="group absolute left-2 sm:left-4 top-1/2 z-30 flex h-11 w-11 sm:h-12 sm:w-12 -translate-y-1/2 items-center justify-center rounded-full border border-neutral-200/80 bg-white/85 text-neutral-700 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:bg-white active:scale-95 dark:border-neutral-800/80 dark:bg-neutral-900/85 dark:text-neutral-200 dark:hover:bg-neutral-900"
+            className="group absolute left-2 sm:left-4 top-1/2 z-30 flex h-11 w-11 sm:h-12 sm:w-12 -translate-y-1/2 items-center justify-center rounded-full border border-[#1a1614]/15 bg-white/90 text-[#1a1614] shadow-md backdrop-blur-md transition-all hover:scale-105 hover:bg-white active:scale-95 dark:border-white/15 dark:bg-[#201c19]/90 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title="Arquivo anterior"
             aria-label="Arquivo anterior"
           >
@@ -290,7 +290,7 @@ export default function FileViewer({
           <button
             type="button"
             onClick={onNext}
-            className="group absolute right-2 sm:right-4 top-1/2 z-30 flex h-11 w-11 sm:h-12 sm:w-12 -translate-y-1/2 items-center justify-center rounded-full border border-neutral-200/80 bg-white/85 text-neutral-700 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:bg-white active:scale-95 dark:border-neutral-800/80 dark:bg-neutral-900/85 dark:text-neutral-200 dark:hover:bg-neutral-900"
+            className="group absolute right-2 sm:right-4 top-1/2 z-30 flex h-11 w-11 sm:h-12 sm:w-12 -translate-y-1/2 items-center justify-center rounded-full border border-[#1a1614]/15 bg-white/90 text-[#1a1614] shadow-md backdrop-blur-md transition-all hover:scale-105 hover:bg-white active:scale-95 dark:border-white/15 dark:bg-[#201c19]/90 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title="Próximo arquivo"
             aria-label="Próximo arquivo"
           >

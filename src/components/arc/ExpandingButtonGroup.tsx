@@ -26,7 +26,7 @@ export default function ExpandingButtonGroup({
 
   return (
     <div
-      className={`inline-flex items-center gap-1 rounded-xl border border-neutral-200 bg-white p-1 shadow-2xs dark:border-neutral-800 dark:bg-neutral-900 ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full border border-[#1a1614]/15 bg-white/90 p-1 shadow-2xs backdrop-blur-xs dark:border-white/15 dark:bg-[#201c19]/90 ${className}`}
     >
       {items.map((item) => {
         const isHovered = hoveredId === item.id;
@@ -39,10 +39,10 @@ export default function ExpandingButtonGroup({
             onClick={item.onClick}
             onMouseEnter={() => setHoveredId(item.id)}
             onMouseLeave={() => setHoveredId(null)}
-            className={`group relative flex h-7 items-center gap-1.5 overflow-hidden rounded-lg px-2 text-xs font-medium transition-colors ${
+            className={`group relative flex h-7 items-center gap-1.5 overflow-hidden rounded-full px-2.5 font-mono text-xs font-medium transition-colors ${
               item.active
-                ? "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-                : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
             }`}
           >
             <span className="shrink-0">{item.icon}</span>

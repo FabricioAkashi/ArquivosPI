@@ -234,23 +234,26 @@ export default function QrCodeModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6 shadow-2xl transition-all dark:border-neutral-800 dark:bg-neutral-900"
+        className="w-full max-w-md rounded-3xl border border-[#1a1614]/15 bg-white/95 p-5 sm:p-6 shadow-2xl backdrop-blur-md transition-all dark:border-white/15 dark:bg-[#201c19]/95"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
+        <div className="flex items-center justify-between border-b border-dashed border-[#1a1614]/15 pb-3 dark:border-white/10">
           <div>
-            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+              COMPARTILHAMENTO
+            </span>
+            <h3 className="font-serif text-lg font-normal text-[#1a1614] dark:text-[#fafbf7]">
               Compartilhar Acesso com QR Code
             </h3>
-            <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+            <p className="text-[11px] text-[#736d67] dark:text-[#9c968f]">
               Defina se o visitante terá acesso a todo o acervo ou apenas a uma pasta específica.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 dark:text-[#9c968f] dark:hover:bg-white/5"
             title="Fechar"
           >
             <X className="h-4 w-4" />
@@ -259,7 +262,7 @@ export default function QrCodeModal({
 
         {/* Seletor de Escopo com Dropdown Pesquisável */}
         <div className="mt-4" ref={dropdownRef}>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+          <label className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
             Escopo do Acesso (O que o visitante verá)
           </label>
 
@@ -267,49 +270,49 @@ export default function QrCodeModal({
             <button
               type="button"
               onClick={() => setDropdownOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between rounded-xl border border-neutral-300 bg-neutral-50/70 px-3.5 py-2.5 text-left text-xs transition hover:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-800/80 dark:hover:border-neutral-600"
+              className="flex w-full items-center justify-between rounded-2xl border border-[#1a1614]/15 bg-[#f5f6f1] px-3.5 py-2.5 text-left text-xs transition hover:border-[#1a1614]/30 dark:border-white/15 dark:bg-[#161311] dark:hover:border-white/30"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 {selectedOption.type === "all" ? (
                   <Globe className="h-4 w-4 shrink-0 text-sky-500" />
                 ) : selectedOption.type === "semester" ? (
-                  <Layers className="h-4 w-4 shrink-0 text-amber-500" />
+                  <Layers className="h-4 w-4 shrink-0 text-[#c96726] dark:text-[#d77435]" />
                 ) : selectedOption.type === "folder" ? (
-                  <FolderIcon className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <FolderIcon className="h-4 w-4 shrink-0 text-[#c96726] dark:text-[#d77435]" />
                 ) : (
                   <FileText className="h-4 w-4 shrink-0 text-blue-500" />
                 )}
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-neutral-900 dark:text-neutral-100">
+                  <p className="truncate font-medium text-[#1a1614] dark:text-[#fafbf7]">
                     {selectedOption.label}
                   </p>
-                  <p className="truncate text-[10px] text-neutral-500 dark:text-neutral-400">
+                  <p className="truncate font-mono text-[10px] text-[#736d67] dark:text-[#9c968f]">
                     {selectedOption.subtitle}
                   </p>
                 </div>
               </div>
-              <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" />
+              <ChevronDown className="h-4 w-4 shrink-0 text-[#736d67] dark:text-[#9c968f]" />
             </button>
 
             {/* Menu Dropdown com Campo de Busca e Sugestões */}
             {dropdownOpen && (
-              <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-hidden rounded-2xl border border-[#1a1614]/15 bg-white shadow-xl dark:border-white/15 dark:bg-[#201c19]">
                 {/* Campo de pesquisa dentro do dropdown */}
-                <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50/80 px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950/60">
-                  <Search className="h-3.5 w-3.5 text-neutral-400" />
+                <div className="flex items-center gap-2 border-b border-[#1a1614]/10 bg-[#f5f6f1] px-3 py-2 dark:border-white/10 dark:bg-[#161311]">
+                  <Search className="h-3.5 w-3.5 text-[#736d67] dark:text-[#9c968f]" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Digite para filtrar pastas ou semestres..."
-                    className="w-full bg-transparent text-xs outline-none placeholder:text-neutral-400 dark:text-neutral-100"
+                    className="w-full bg-transparent font-mono text-xs outline-none placeholder:text-[#736d67]/60 dark:text-[#fafbf7] dark:placeholder:text-[#9c968f]/60"
                     autoFocus
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="text-neutral-400 hover:text-neutral-600"
+                      className="text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -317,7 +320,7 @@ export default function QrCodeModal({
                 </div>
 
                 {/* Lista de Sugestões */}
-                <div className="max-h-52 overflow-y-auto p-1 text-xs divide-y divide-neutral-100 dark:divide-neutral-800/60">
+                <div className="max-h-52 overflow-y-auto p-1 text-xs divide-y divide-[#1a1614]/8 dark:divide-white/8">
                   {filteredOptions.length === 0 ? (
                     <div className="p-3 text-center text-xs text-neutral-400">
                       Nenhuma pasta ou semestre corresponde a &quot;{searchQuery}&quot;
@@ -380,7 +383,7 @@ export default function QrCodeModal({
         <div className="mt-4 flex flex-col items-center">
           <div
             ref={qrWrapRef}
-            className="flex items-center justify-center rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-white"
+            className="flex items-center justify-center rounded-2xl border border-[#1a1614]/15 bg-white p-4 shadow-sm dark:border-white/15 dark:bg-white"
           >
             <QRCodeCanvas
               value={targetUrl}
@@ -388,35 +391,35 @@ export default function QrCodeModal({
               level="H"
               includeMargin={false}
               bgColor="#ffffff"
-              fgColor="#171717"
+              fgColor="#1a1614"
             />
           </div>
 
-          <p className="mt-2.5 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+          <p className="mt-2.5 text-center font-mono text-xs font-semibold text-[#1a1614] dark:text-[#fafbf7]">
             {selectedOption.label}
           </p>
         </div>
 
         {/* Link e Ações */}
         <div className="mt-4 space-y-2">
-          <div className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-800/80 dark:text-neutral-300">
-            <span className="truncate flex-1 font-mono text-[11px]">
+          <div className="flex items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-[#f5f6f1] px-3.5 py-1.5 text-xs text-[#1a1614] dark:border-white/15 dark:bg-[#161311] dark:text-[#fafbf7]">
+            <span className="truncate flex-1 font-mono text-[11px] text-[#736d67] dark:text-[#9c968f]">
               {targetUrl}
             </span>
             <button
               type="button"
               onClick={handleCopy}
-              className="inline-flex items-center gap-1 rounded-md bg-neutral-200/80 px-2 py-1 text-[11px] font-semibold text-neutral-800 transition hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-600"
+              className="inline-flex items-center gap-1 rounded-full bg-[#1a1614] px-2.5 py-1 font-mono text-[10px] font-semibold text-[#fafbf7] transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
             >
               {copied ? (
                 <>
-                  <Check className="h-3 w-3 text-emerald-500" />
-                  <span>Copiado!</span>
+                  <Check className="h-3 w-3 text-emerald-400" />
+                  <span>COPIADO</span>
                 </>
               ) : (
                 <>
                   <Copy className="h-3 w-3" />
-                  <span>Copiar</span>
+                  <span>COPIAR</span>
                 </>
               )}
             </button>
@@ -426,17 +429,17 @@ export default function QrCodeModal({
             <button
               type="button"
               onClick={handleDownloadPng}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white py-2 text-xs font-semibold text-neutral-700 shadow-2xs transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[#1a1614]/15 bg-white py-2 font-mono text-xs font-semibold text-[#1a1614] shadow-2xs transition hover:bg-black/5 dark:border-white/15 dark:bg-[#161311] dark:text-[#fafbf7] dark:hover:bg-white/5"
             >
-              <Download className="h-3.5 w-3.5" />
-              <span>Baixar Imagem PNG</span>
+              <Download className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+              <span>BAIXAR PNG</span>
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+              className="rounded-full bg-[#1a1614] px-5 py-2 font-mono text-xs font-semibold text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
             >
-              Concluído
+              CONCLUÍDO
             </button>
           </div>
         </div>

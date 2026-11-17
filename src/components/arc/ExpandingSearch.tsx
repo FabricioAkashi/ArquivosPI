@@ -104,16 +104,16 @@ export default function ExpandingSearch({
                 damping: 35,
               }
         }
-        className="relative flex h-9 items-center overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xs dark:border-neutral-800 dark:bg-neutral-900"
+        className="relative flex h-8.5 items-center overflow-hidden rounded-full border border-[#1a1614]/15 bg-white/90 shadow-2xs backdrop-blur-xs dark:border-white/15 dark:bg-[#201c19]/90"
       >
         {/* Botão / Ícone de busca */}
         <button
           type="button"
           onClick={handleOpen}
-          className="flex h-9 w-9 shrink-0 items-center justify-center text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+          className="flex h-8.5 w-8.5 shrink-0 items-center justify-center text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
           title="Buscar"
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-3.5 w-3.5" />
         </button>
 
         {/* Input que aparece quando expandido */}
@@ -132,7 +132,7 @@ export default function ExpandingSearch({
               inputRef.current?.blur();
             }
           }}
-          className="h-full flex-1 bg-transparent pr-8 text-xs text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-100"
+          className="h-full flex-1 bg-transparent pr-8 font-mono text-xs text-[#1a1614] outline-none placeholder:text-[#736d67]/60 dark:text-[#fafbf7] dark:placeholder:text-[#9c968f]/60"
         />
 
         {/* Botão de limpar busca */}
@@ -143,10 +143,10 @@ export default function ExpandingSearch({
               handleQueryChange("");
               inputRef.current?.focus();
             }}
-            className="absolute right-2 flex h-5 w-5 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            className="absolute right-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#1a1614]/10 text-[#736d67] hover:bg-[#1a1614]/20 hover:text-[#1a1614] dark:bg-white/10 dark:text-[#9c968f] dark:hover:bg-white/20 dark:hover:text-[#fafbf7]"
             title="Limpar busca"
           >
-            <X className="h-3 w-3" />
+            <X className="h-2.5 w-2.5" />
           </button>
         )}
       </motion.div>
@@ -159,9 +159,9 @@ export default function ExpandingSearch({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-full z-40 mt-1.5 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white p-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+            className="absolute left-0 top-full z-40 mt-1.5 w-72 overflow-hidden rounded-2xl border border-[#1a1614]/15 bg-white/95 p-1 shadow-xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95"
           >
-            <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+            <div className="px-2.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-[#736d67] dark:text-[#9c968f]">
               Resultados ({filteredItems.length})
             </div>
             {filteredItems.map((item) => (
@@ -172,7 +172,7 @@ export default function ExpandingSearch({
                   if (onSelect) onSelect(item);
                   setExpanded(false);
                 }}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs transition hover:bg-[#1a1614]/5 dark:hover:bg-white/5"
               >
                 {item.icon}
                 <div className="min-w-0 flex-1">

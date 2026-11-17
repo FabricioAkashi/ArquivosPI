@@ -76,22 +76,22 @@ export default function HoldToConfirm({
 
   const toneClasses = {
     danger: {
-      border: "border-rose-200 dark:border-rose-900/60",
+      border: "border-rose-500/40",
       fill: "bg-rose-600 text-white",
       text: "text-rose-600 dark:text-rose-400",
-      bgHover: "hover:bg-rose-50 dark:hover:bg-rose-950/30",
+      bgHover: "hover:bg-rose-500/10",
     },
     accent: {
-      border: "border-neutral-300 dark:border-neutral-700",
-      fill: "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900",
-      text: "text-neutral-900 dark:text-neutral-100",
-      bgHover: "hover:bg-neutral-100 dark:hover:bg-neutral-800",
+      border: "border-[#c96726]/40 dark:border-[#d77435]/40",
+      fill: "bg-[#c96726] text-white dark:bg-[#d77435]",
+      text: "text-[#c96726] dark:text-[#d77435]",
+      bgHover: "hover:bg-[#c96726]/10",
     },
     neutral: {
-      border: "border-neutral-200 dark:border-neutral-800",
-      fill: "bg-neutral-700 text-white",
-      text: "text-neutral-700 dark:text-neutral-300",
-      bgHover: "hover:bg-neutral-100 dark:hover:bg-neutral-800",
+      border: "border-[#1a1614]/15 dark:border-white/15",
+      fill: "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]",
+      text: "text-[#1a1614] dark:text-[#fafbf7]",
+      bgHover: "hover:bg-black/5 dark:hover:bg-white/5",
     },
   }[tone];
 
@@ -113,7 +113,7 @@ export default function HoldToConfirm({
       onKeyUp={(e) => {
         if (e.key === " " || e.key === "Enter") cancelHold();
       }}
-      className={`relative inline-flex h-9 select-none items-center justify-center overflow-hidden rounded-xl border px-3.5 text-xs font-semibold shadow-2xs transition-all active:scale-[0.98] ${
+      className={`relative inline-flex h-8.5 select-none items-center justify-center overflow-hidden rounded-full border px-4 font-mono text-xs font-medium shadow-2xs transition-all active:scale-[0.98] ${
         toneClasses.border
       } ${toneClasses.bgHover} ${
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"

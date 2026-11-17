@@ -84,6 +84,22 @@ function FileCategoryIcon({ category, className = "h-5 w-5" }: { category: FileC
   }
 }
 
+function DotMatrixIcon({ className = "h-4 w-4 text-[#c96726] dark:text-[#d77435]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className={className} aria-hidden="true">
+      <circle cx="8" cy="2" r="1.3" />
+      <circle cx="5" cy="5" r="1.3" />
+      <circle cx="11" cy="5" r="1.3" />
+      <circle cx="3" cy="9" r="1.3" />
+      <circle cx="8" cy="9" r="1.3" />
+      <circle cx="13" cy="9" r="1.3" />
+      <circle cx="2" cy="14" r="1.3" />
+      <circle cx="8" cy="14" r="1.3" />
+      <circle cx="14" cy="14" r="1.3" />
+    </svg>
+  );
+}
+
 export default function ShowcaseApp({
   initialSemesters,
   initialFolders,
@@ -514,7 +530,7 @@ export default function ShowcaseApp({
 
   return (
     <div
-      className="relative flex h-dvh flex-col overflow-hidden bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
+      className="relative flex h-dvh flex-col overflow-hidden bg-[#f5f6f1] text-[#1a1614] antialiased dark:bg-[#161311] dark:text-[#fafbf7]"
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -522,48 +538,71 @@ export default function ShowcaseApp({
     >
       {/* Fullscreen Drag Overlay */}
       {isDragging && isAdmin && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/50 backdrop-blur-xs">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-white/80 bg-neutral-900/90 px-10 py-8 text-white shadow-2xl">
-            <UploadCloud className="h-10 w-10 text-emerald-400" />
-            <p className="text-base font-semibold">
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
+          <div className="flex flex-col items-center gap-2 rounded-3xl border-2 border-dashed border-[#c96726] bg-[#1a1614]/95 px-10 py-8 text-[#fafbf7] shadow-2xl">
+            <UploadCloud className="h-10 w-10 text-[#c96726] animate-bounce" />
+            <p className="font-serif text-lg font-normal">
               Solte os arquivos para enviar para {activeFolder?.name || activeSemester?.name || "a pasta atual"}
             </p>
-            <p className="text-xs text-neutral-300">
+            <p className="font-mono text-xs text-[#9c968f]">
               PDF, Imagens, DOCX, PPTX, Vídeos e mais
             </p>
           </div>
         </div>
       )}
 
-      {/* Top Navbar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 px-3 sm:px-4 dark:border-neutral-800">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      {/* Top Navbar Antimetal Aesthetic */}
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#1a1614]/10 bg-[#f5f6f1]/80 px-3 sm:px-5 backdrop-blur-md dark:border-white/10 dark:bg-[#161311]/80">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3.5">
           {/* Botão de abrir/fechar a barra lateral com animação */}
           <button
             type="button"
             onClick={() => setSidebarOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+            className="inline-flex h-8.5 w-8.5 items-center justify-center rounded-full border border-[#1a1614]/15 bg-white/60 text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/60 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title={sidebarOpen ? "Recolher painel lateral" : "Abrir painel lateral"}
             aria-label="Alternar painel lateral"
           >
             {sidebarOpen ? (
-              <PanelLeftClose className="h-5 w-5" />
+              <PanelLeftClose className="h-4 w-4" />
             ) : (
-              <PanelLeftOpen className="h-5 w-5" />
+              <PanelLeftOpen className="h-4 w-4" />
             )}
           </button>
 
+          {/* Antimetal Brand Tile */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveSemesterId(null);
+              setActiveFolderId(null);
+              setSelectedFileId(null);
+            }}
+            className="flex items-center gap-2 rounded-xl border border-[#1a1614]/10 bg-white/70 px-2.5 py-1.5 shadow-2xs transition hover:bg-white dark:border-white/10 dark:bg-[#201c19]/70 dark:hover:bg-[#201c19]"
+            title="Ir para o início"
+          >
+            <DotMatrixIcon className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+            <span className="font-semibold text-xs tracking-tight text-[#1a1614] dark:text-[#fafbf7]">
+              Acervo PI
+            </span>
+            <span className="hidden sm:inline-block rounded bg-[#6d8352]/10 px-1 py-0.2 font-mono text-[9px] font-bold uppercase text-[#55693e] dark:text-[#8ea573]">
+              v2.0
+            </span>
+          </button>
+
+          {/* Monospace Separator */}
+          <span className="text-[#1a1614]/25 dark:text-white/25 font-mono text-xs select-none">/</span>
+
           {/* Breadcrumbs de Navegação estilo Explorador */}
-          <nav className="flex min-w-0 items-center gap-1.5 text-xs sm:text-sm">
+          <nav className="flex min-w-0 items-center gap-1.5 font-mono text-xs">
             {isLockedScope && !isAdmin ? (
               <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
                 <Lock className="h-3 w-3 shrink-0" />
                 <span className="truncate">
                   {initialScope === "folder" && activeFolder
-                    ? `Pasta autorizada: ${activeFolder.name}`
+                    ? `PASTA: ${activeFolder.name}`
                     : initialScope === "semester" && activeSemester
-                    ? `Semestre autorizado: ${activeSemester.name}`
-                    : "Acesso Restrito"}
+                    ? `SEMESTRE: ${activeSemester.name}`
+                    : "ACESSO RESTRITO"}
                 </span>
               </div>
             ) : (
@@ -574,16 +613,19 @@ export default function ShowcaseApp({
                   setActiveFolderId(null);
                   setSelectedFileId(null);
                 }}
-                className="flex items-center gap-1 font-semibold text-neutral-900 transition hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
+                className={`truncate font-medium transition ${
+                  !activeSemester
+                    ? "text-[#1a1614] dark:text-[#fafbf7] font-semibold"
+                    : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+                }`}
               >
-                <Home className="h-4 w-4" />
-                <span className="hidden sm:inline">Início</span>
+                <span>INÍCIO</span>
               </button>
             )}
 
             {(!isLockedScope || isAdmin || initialScope !== "folder") && activeSemester && (
               <>
-                <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="text-[#1a1614]/25 dark:text-white/25">/</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -593,36 +635,36 @@ export default function ShowcaseApp({
                   }}
                   className={`truncate font-medium transition ${
                     !activeFolder && !selectedFile
-                      ? "text-neutral-900 dark:text-neutral-100 font-semibold"
-                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
+                      ? "text-[#1a1614] dark:text-[#fafbf7] font-semibold"
+                      : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
                   }`}
                 >
-                  {activeSemester.name}
+                  {activeSemester.name.toUpperCase()}
                 </button>
               </>
             )}
 
             {activeFolder && (
               <>
-                <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="text-[#1a1614]/25 dark:text-white/25">/</span>
                 <button
                   type="button"
                   onClick={() => setSelectedFileId(null)}
                   className={`truncate font-medium transition ${
                     !selectedFile
-                      ? "text-neutral-900 dark:text-neutral-100 font-semibold"
-                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
+                      ? "text-[#1a1614] dark:text-[#fafbf7] font-semibold"
+                      : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
                   }`}
                 >
-                  {activeFolder.name}
+                  {activeFolder.name.toUpperCase()}
                 </button>
               </>
             )}
 
             {selectedFile && (
               <>
-                <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />
-                <span className="truncate font-semibold text-neutral-900 dark:text-neutral-100">
+                <span className="text-[#1a1614]/25 dark:text-white/25">/</span>
+                <span className="truncate font-semibold text-[#1a1614] dark:text-[#fafbf7]">
                   {selectedFile.name}
                 </span>
               </>
@@ -632,10 +674,10 @@ export default function ShowcaseApp({
               <button
                 type="button"
                 onClick={() => setIsLockedScope(false)}
-                className="ml-2 hidden sm:inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300"
+                className="ml-2 hidden sm:inline-flex items-center gap-1 rounded-md bg-[#1a1614]/5 px-2 py-0.5 text-[10px] font-mono text-[#736d67] transition hover:bg-[#1a1614]/10 dark:bg-white/10 dark:text-[#9c968f]"
                 title="Você é admin: clique para liberar a visualização de todo o acervo"
               >
-                <span>Desbloquear tudo</span>
+                <span>DESBLOQUEAR TUDO</span>
               </button>
             )}
           </nav>
@@ -648,20 +690,20 @@ export default function ShowcaseApp({
               setQrScope(selectedFile ? "file" : activeFolder ? "folder" : activeSemester ? "semester" : "all");
               setQrOpen(true);
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-900"
+            className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title="Gerar QR Code de acesso"
           >
-            <QrCode className="h-4 w-4" />
-            <span className="hidden sm:inline">QR Code</span>
+            <QrCode className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+            <span className="hidden sm:inline">QR CODE</span>
           </button>
 
           <button
             type="button"
             onClick={handleLockToggle}
-            className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${
+            className={`inline-flex h-8.5 items-center gap-1.5 rounded-full px-3.5 font-mono text-xs font-medium transition shadow-2xs ${
               isAdmin
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                : "border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                : "border border-[#1a1614]/15 bg-white/70 text-[#1a1614] hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             }`}
             title={
               isAdmin
@@ -671,13 +713,13 @@ export default function ShowcaseApp({
           >
             {isAdmin ? (
               <>
-                <Unlock className="h-4 w-4" />
-                <span className="hidden sm:inline">Editando</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="hidden sm:inline">EDITANDO</span>
               </>
             ) : (
               <>
-                <Lock className="h-4 w-4" />
-                <span className="hidden sm:inline">Gerenciar</span>
+                <Lock className="h-3.5 w-3.5 text-[#736d67] dark:text-[#9c968f]" />
+                <span className="hidden sm:inline">GERENCIAR</span>
               </>
             )}
           </button>
@@ -696,23 +738,23 @@ export default function ShowcaseApp({
           />
         )}
 
-        {/* Sidebar com animação suave de recolher/expandir */}
+        {/* Sidebar Antimetal Blueprint */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-neutral-200 bg-neutral-50/95 backdrop-blur-md transition-all duration-300 ease-in-out lg:static lg:bg-neutral-50/50 dark:border-neutral-800 dark:bg-neutral-950/95 lg:dark:bg-neutral-950 ${
+          className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-dashed border-[#1a1614]/15 bg-[#f0f1eb]/95 backdrop-blur-md transition-all duration-300 ease-in-out lg:static lg:bg-[#f0f1eb]/60 dark:border-white/10 dark:bg-[#1a1614]/95 lg:dark:bg-[#1a1614]/60 ${
             sidebarOpen
               ? "translate-x-0 w-72 sm:w-80 opacity-100"
               : "-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-r-0"
           }`}
         >
           {/* Header do Sidebar */}
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Navegação
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-dashed border-[#1a1614]/15 px-4 dark:border-white/10">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+              01 / NAVEGAÇÃO PRINCIPAL
             </span>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-200/60 dark:hover:bg-neutral-800"
+              className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 dark:text-[#9c968f] dark:hover:bg-white/5"
               title="Recolher painel lateral"
             >
               <X className="h-4 w-4" />
@@ -731,22 +773,22 @@ export default function ShowcaseApp({
                     setSelectedFileId(null);
                     if (window.innerWidth < 1024) setSidebarOpen(false);
                   }}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 font-mono text-xs font-medium transition ${
                     !activeSemesterId
-                      ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                      : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                      ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                      : "text-[#736d67] hover:bg-[#1a1614]/5 dark:text-[#9c968f] dark:hover:bg-white/5"
                   }`}
                 >
                   <Home className="h-4 w-4" />
-                  <span>Início (Todos os Semestres)</span>
+                  <span>INÍCIO (TODOS OS SEMESTRES)</span>
                 </button>
               </div>
             )}
 
             <div>
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                  {isLockedScope && !isAdmin ? "Semestre Autorizado" : `Semestres (${semesters.length})`}
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                  {isLockedScope && !isAdmin ? "02 / SEMESTRE AUTORIZADO" : `02 / SEMESTRES (${semesters.length})`}
                 </span>
                 {isAdmin && (
                   <button
@@ -755,10 +797,10 @@ export default function ShowcaseApp({
                       setEditingSemester(null);
                       setSemesterModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-200/70 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-[#1a1614]/15 bg-white/70 px-2 py-0.5 font-mono text-[10px] font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                   >
-                    <Plus className="h-3 w-3" />
-                    Novo
+                    <Plus className="h-2.5 w-2.5" />
+                    <span>NOVO</span>
                   </button>
                 )}
               </div>
@@ -766,7 +808,7 @@ export default function ShowcaseApp({
               <div className="space-y-1">
                 {semesters
                   .filter((sem) => !isLockedScope || isAdmin || sem.id === activeSemesterId)
-                  .map((sem) => {
+                  .map((sem, idx) => {
                   const active = sem.id === activeSemesterId;
                   const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
                   const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
@@ -780,17 +822,20 @@ export default function ShowcaseApp({
                         setSelectedFileId(null);
                         if (window.innerWidth < 1024) setSidebarOpen(false);
                       }}
-                      className={`group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs transition ${
+                      className={`group flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 font-mono text-xs transition ${
                         active
-                          ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-semibold"
-                          : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                          ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
+                          : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <FolderIcon className={`h-4 w-4 shrink-0 ${active ? "text-white dark:text-neutral-900" : "text-amber-500"}`} />
+                        <span className={`text-[10px] ${active ? "text-[#c96726] dark:text-[#d77435]" : "text-[#736d67]/60 dark:text-[#9c968f]/60"}`}>
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <FolderIcon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-[#fafbf7] dark:text-[#1a1614]" : "text-[#c96726] dark:text-[#d77435]"}`} />
                         <span className="truncate">{sem.name}</span>
                       </div>
-                      <span className={`text-[10px] ${active ? "opacity-80" : "text-neutral-400"}`}>
+                      <span className={`text-[10px] ${active ? "opacity-75" : "text-[#736d67]/60 dark:text-[#9c968f]/60"}`}>
                         {semFoldersCount}p · {semFilesCount}a
                       </span>
                     </div>
@@ -802,22 +847,22 @@ export default function ShowcaseApp({
         </aside>
 
         {/* Área Central: Visualizador OU Explorador de Arquivos */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-neutral-50/30 dark:bg-neutral-950">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#f5f6f1] dark:bg-[#161311]">
           {selectedFile ? (
             /* Modo 1: Visualizador de Arquivo em Tela Cheia */
             <div className="flex h-full flex-col">
               {/* Botão de retorno superior */}
-              <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-2 text-xs dark:border-neutral-800 dark:bg-neutral-950">
+              <div className="flex items-center justify-between border-b border-[#1a1614]/10 bg-white/70 px-4 py-2.5 text-xs backdrop-blur-md dark:border-white/10 dark:bg-[#201c19]/70">
                 <button
                   type="button"
                   onClick={() => setSelectedFileId(null)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-900"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/80 px-3.5 py-1.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/80 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span>Voltar para arquivos</span>
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>VOLTAR PARA ARQUIVOS</span>
                 </button>
-                <span className="truncate text-neutral-500 text-[11px]">
-                  {activeSemester?.name} {activeFolder ? `› ${activeFolder.name}` : ""}
+                <span className="truncate font-mono text-xs text-[#736d67] dark:text-[#9c968f]">
+                  {activeSemester?.name.toUpperCase()} {activeFolder ? `› ${activeFolder.name.toUpperCase()}` : ""}
                 </span>
               </div>
 
@@ -842,7 +887,7 @@ export default function ShowcaseApp({
             <div className="flex h-full flex-col overflow-y-auto p-4 sm:p-6 lg:p-8">
               {/* Toolbar e Ações do Explorador */}
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   {/* Botão de Voltar ao nível anterior */}
                   {(
                     (activeFolderId && (!isLockedScope || isAdmin || initialScope !== "folder" || activeFolderId !== initialFolderId)) ||
@@ -862,21 +907,28 @@ export default function ShowcaseApp({
                           setActiveSemesterId(null);
                         }
                       }}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-700 shadow-xs transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                      className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                       title="Subir de nível"
                     >
-                      <ArrowLeft className="h-4 w-4" />
-                      <span>Voltar</span>
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      <span>VOLTAR</span>
                     </button>
                   )}
 
-                  <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-                    {activeFolder
-                      ? activeFolder.name
-                      : activeSemester
-                      ? `${activeSemester.name} — ${activeSemester.title}`
-                      : "Gerenciador de Projetos"}
-                  </h1>
+                  <div>
+                    {activeSemester && (
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                        {activeFolder ? `02 / PASTA DE PROJETO` : `01 / CICLO SEMESTRAL`}
+                      </p>
+                    )}
+                    <h1 className="font-serif text-2xl sm:text-3xl font-normal tracking-tight text-[#1a1614] dark:text-[#fafbf7]">
+                      {activeFolder
+                        ? activeFolder.name
+                        : activeSemester
+                        ? `${activeSemester.name} — ${activeSemester.title}`
+                        : "Gerenciador de Projetos"}
+                    </h1>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -899,14 +951,14 @@ export default function ShowcaseApp({
                         {
                           id: "grid",
                           label: "Grade",
-                          icon: <LayoutGrid className="h-4 w-4" />,
+                          icon: <LayoutGrid className="h-3.5 w-3.5" />,
                           active: viewMode === "grid",
                           onClick: () => setViewMode("grid"),
                         },
                         {
                           id: "list",
                           label: "Lista",
-                          icon: <List className="h-4 w-4" />,
+                          icon: <List className="h-3.5 w-3.5" />,
                           active: viewMode === "list",
                           onClick: () => setViewMode("list"),
                         },
@@ -924,11 +976,11 @@ export default function ShowcaseApp({
                             setEditingFolder(null);
                             setFolderModalOpen(true);
                           }}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-700 shadow-xs transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                           title="Criar nova pasta neste semestre"
                         >
-                          <FolderPlus className="h-4 w-4 text-amber-500" />
-                          <span>Nova Pasta</span>
+                          <FolderPlus className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+                          <span>NOVA PASTA</span>
                         </button>
                       )}
 
@@ -939,19 +991,19 @@ export default function ShowcaseApp({
                             setEditingSemester(null);
                             setSemesterModalOpen(true);
                           }}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 text-xs font-medium text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-[#1a1614] px-4 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
                         >
-                          <Plus className="h-4 w-4" />
-                          <span>Novo Semestre</span>
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>NOVO SEMESTRE</span>
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 text-xs font-medium text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-[#1a1614] px-4 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
                         >
-                          <UploadCloud className="h-4 w-4" />
-                          <span>Enviar Arquivo</span>
+                          <UploadCloud className="h-3.5 w-3.5" />
+                          <span>ENVIAR ARQUIVO</span>
                         </button>
                       )}
                     </>
@@ -976,12 +1028,70 @@ export default function ShowcaseApp({
               {/* NÍVEL 0: Exibição dos Semestres como Pastas Principais */}
               {!activeSemesterId && (
                 <div>
-                  <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400">
-                    Selecione um semestre para acessar as pastas de projetos, relatórios e apresentações.
-                  </p>
+                  {/* Antimetal-style Editorial Hero */}
+                  <div className="relative mb-8 rounded-3xl border border-[#1a1614]/10 bg-white/70 p-6 sm:p-10 shadow-xs backdrop-blur-xs antimetal-dots dark:border-white/10 dark:bg-[#201c19]/70">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-[#6d8352]/30 bg-[#6d8352]/10 px-3 py-1 font-mono text-[11px] font-medium tracking-wide text-[#55693e] dark:text-[#8ea573]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#6d8352] animate-pulse" />
+                        <span>01 / ARQUIVO DIGITAL · PROJETO INTEGRADOR</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 font-mono text-[11px] text-[#736d67] dark:text-[#9c968f]">
+                        <span>● SISTEMA VERIFICADO</span>
+                        <span>·</span>
+                        <span>BUILT WITH PRECISION</span>
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                    {semesters.map((sem) => {
+                    <h1 className="max-w-3xl font-serif text-3xl sm:text-4xl md:text-5xl font-normal tracking-tight text-[#1a1614] dark:text-[#fafbf7] leading-tight">
+                      O acervo acadêmico que documenta a sua trajetória.
+                    </h1>
+
+                    <p className="mt-3 max-w-2xl text-sm sm:text-base text-[#736d67] dark:text-[#9c968f] leading-relaxed">
+                      Relatórios técnicos, apresentações de banca, código-fonte e documentações organizados por ciclo semestral com visualização instantânea.
+                    </p>
+
+                    {/* Quick metrics in Antimetal monospace chip row */}
+                    <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-dashed border-[#1a1614]/15 pt-5 dark:border-white/10">
+                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a1614]/10 bg-white/80 px-2.5 py-1 font-mono text-xs font-medium text-[#1a1614] dark:border-white/10 dark:bg-[#161311]/80 dark:text-[#fafbf7]">
+                        <span className="text-[#c96726] dark:text-[#d77435] font-bold">{String(semesters.length).padStart(2, "0")}</span>
+                        <span className="text-[#736d67] dark:text-[#9c968f]">SEMESTRES</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a1614]/10 bg-white/80 px-2.5 py-1 font-mono text-xs font-medium text-[#1a1614] dark:border-white/10 dark:bg-[#161311]/80 dark:text-[#fafbf7]">
+                        <span className="text-[#c96726] dark:text-[#d77435] font-bold">{String(folders.length).padStart(2, "0")}</span>
+                        <span className="text-[#736d67] dark:text-[#9c968f]">PASTAS</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#1a1614]/10 bg-white/80 px-2.5 py-1 font-mono text-xs font-medium text-[#1a1614] dark:border-white/10 dark:bg-[#161311]/80 dark:text-[#fafbf7]">
+                        <span className="text-[#c96726] dark:text-[#d77435] font-bold">{String(files.length).padStart(2, "0")}</span>
+                        <span className="text-[#736d67] dark:text-[#9c968f]">DOCUMENTOS</span>
+                      </div>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingSemester(null);
+                            setSemesterModalOpen(true);
+                          }}
+                          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[#1a1614] px-4 py-1.5 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>NOVO SEMESTRE</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section Title */}
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                      01 / SELEÇÃO DE SEMESTRES ({semesters.length})
+                    </span>
+                    <span className="font-mono text-xs text-[#736d67] dark:text-[#9c968f]">
+                      Clique para explorar as pastas
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                    {semesters.map((sem, idx) => {
                       const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
                       const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
 
@@ -989,7 +1099,7 @@ export default function ShowcaseApp({
                         {
                           id: "open",
                           label: "Abrir semestre",
-                          icon: <FolderOpen className="h-4 w-4 text-amber-500" />,
+                          icon: <FolderOpen className="h-4 w-4 text-[#c96726]" />,
                           onSelect: () => {
                             setActiveSemesterId(sem.id);
                             setActiveFolderId(null);
@@ -998,7 +1108,7 @@ export default function ShowcaseApp({
                         {
                           id: "qr",
                           label: "Gerar QR Code",
-                          icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                          icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
                           onSelect: () => {
                             setActiveSemesterId(sem.id);
                             setActiveFolderId(null);
@@ -1011,7 +1121,7 @@ export default function ShowcaseApp({
                               {
                                 id: "edit",
                                 label: "Editar semestre",
-                                icon: <Edit3 className="h-4 w-4 text-neutral-500" />,
+                                icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
                                 separatorBefore: true,
                                 onSelect: () => {
                                   setEditingSemester(sem);
@@ -1038,12 +1148,17 @@ export default function ShowcaseApp({
                               setActiveSemesterId(sem.id);
                               setActiveFolderId(null);
                             }}
-                            className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                            className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-[#1a1614]/10 bg-white/80 p-5 shadow-2xs backdrop-blur-xs transition-all hover:-translate-y-0.5 hover:border-[#c96726]/40 hover:shadow-md dark:border-white/10 dark:bg-[#201c19]/80 dark:hover:border-[#d77435]/40"
                           >
                             <div>
                               <div className="flex items-center justify-between">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
-                                  <FolderIcon className="h-6 w-6" />
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#c96726]/10 text-[#c96726] transition group-hover:scale-105 dark:bg-[#d77435]/15 dark:text-[#d77435]">
+                                    <FolderIcon className="h-5 w-5" />
+                                  </div>
+                                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                                    {String(idx + 1).padStart(2, "0")} / CICLO
+                                  </span>
                                 </div>
 
                                 <div
@@ -1055,27 +1170,30 @@ export default function ShowcaseApp({
                                     trigger={
                                       <button
                                         type="button"
-                                        className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                        className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
                                         title="Opções do semestre"
                                       >
-                                        <MoreVertical className="h-4 w-4" />
+                                        <MoreVertical className="h-3.5 w-3.5" />
                                       </button>
                                     }
                                   />
                                 </div>
                               </div>
 
-                              <h3 className="mt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                              <h3 className="mt-4 font-serif text-2xl font-normal text-[#1a1614] dark:text-[#fafbf7] tracking-tight">
                                 {sem.name}
                               </h3>
-                              <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
-                                {sem.title || "Projeto Integrador"}
+                              <p className="mt-1 font-sans text-xs text-[#736d67] dark:text-[#9c968f] line-clamp-1">
+                                {sem.title || "Projeto Integrador · Engenharia & Computação"}
                               </p>
                             </div>
 
-                            <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] text-neutral-400 dark:border-neutral-800/60">
-                              <span>{semFoldersCount} pasta(s)</span>
-                              <span>{semFilesCount} arquivo(s)</span>
+                            <div className="mt-5 flex items-center justify-between border-t border-dashed border-[#1a1614]/10 pt-3 font-mono text-[11px] text-[#736d67] dark:border-white/10 dark:text-[#9c968f]">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#6d8352] dark:bg-[#7f9564]" />
+                                {semFoldersCount} {semFoldersCount === 1 ? "PASTA" : "PASTAS"}
+                              </span>
+                              <span>{semFilesCount} {semFilesCount === 1 ? "ARQUIVO" : "ARQUIVOS"}</span>
                             </div>
                           </div>
                         </ContextMenu>
@@ -1091,23 +1209,25 @@ export default function ShowcaseApp({
                   {/* Seção de Subpastas */}
                   {currentSubfolders.length > 0 && (
                     <div>
-                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                        Pastas ({currentSubfolders.length})
-                      </h2>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                          02 / PASTAS DISPONÍVEIS ({currentSubfolders.length})
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                         {currentSubfolders.map((fld) => {
                           const subFilesCount = files.filter((f) => f.folderId === fld.id).length;
                           const folderMenuItems: ContextMenuItem[] = [
                             {
                               id: "open",
                               label: "Abrir pasta",
-                              icon: <FolderOpen className="h-4 w-4 text-amber-500" />,
+                              icon: <FolderOpen className="h-4 w-4 text-[#c96726]" />,
                               onSelect: () => setActiveFolderId(fld.id),
                             },
                             {
                               id: "qr",
                               label: "Gerar QR Code da pasta",
-                              icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                              icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
                               onSelect: () => {
                                 setActiveFolderId(fld.id);
                                 setQrScope("folder");
@@ -1119,7 +1239,7 @@ export default function ShowcaseApp({
                                   {
                                     id: "edit",
                                     label: "Renomear pasta",
-                                    icon: <Edit3 className="h-4 w-4 text-neutral-500" />,
+                                    icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
                                     separatorBefore: true,
                                     onSelect: () => {
                                       setEditingFolder(fld);
@@ -1143,18 +1263,18 @@ export default function ShowcaseApp({
                             <ContextMenu key={fld.id} items={folderMenuItems}>
                               <div
                                 onClick={() => setActiveFolderId(fld.id)}
-                                className="group flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                                className="group flex cursor-pointer items-center justify-between rounded-2xl border border-[#1a1614]/10 bg-white/80 p-4 shadow-2xs backdrop-blur-xs transition-all hover:-translate-y-0.5 hover:border-[#c96726]/40 hover:shadow-sm dark:border-white/10 dark:bg-[#201c19]/80 dark:hover:border-[#d77435]/40"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c96726]/10 text-[#c96726] transition group-hover:scale-105 dark:bg-[#d77435]/15 dark:text-[#d77435]">
                                     <FolderIcon className="h-5 w-5" />
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
+                                    <p className="truncate font-sans text-sm font-semibold text-[#1a1614] transition group-hover:text-[#c96726] dark:text-[#fafbf7] dark:group-hover:text-[#d77435]">
                                       {fld.name}
                                     </p>
-                                    <p className="text-[11px] text-neutral-400">
-                                      {subFilesCount} arquivo(s)
+                                    <p className="font-mono text-[11px] text-[#736d67] dark:text-[#9c968f]">
+                                      {subFilesCount} {subFilesCount === 1 ? "ARQUIVO" : "ARQUIVOS"}
                                     </p>
                                   </div>
                                 </div>
@@ -1168,10 +1288,10 @@ export default function ShowcaseApp({
                                     trigger={
                                       <button
                                         type="button"
-                                        className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                        className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
                                         title="Opções da pasta"
                                       >
-                                        <MoreVertical className="h-4 w-4" />
+                                        <MoreVertical className="h-3.5 w-3.5" />
                                       </button>
                                     }
                                   />
@@ -1187,40 +1307,40 @@ export default function ShowcaseApp({
                   {/* Seção de Arquivos */}
                   <div>
                     <div className="mb-3 flex items-center justify-between">
-                      <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                        Arquivos ({filteredFiles.length})
-                      </h2>
+                      <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                        03 / DOCUMENTOS & ARQUIVOS ({filteredFiles.length})
+                      </span>
                       {uploadingCount > 0 && (
-                        <span className="flex items-center gap-1.5 text-xs text-neutral-500">
+                        <span className="flex items-center gap-1.5 font-mono text-xs text-[#c96726] dark:text-[#d77435]">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Enviando {uploadingCount}...
+                          ENVIANDO {uploadingCount}...
                         </span>
                       )}
                     </div>
 
                     {filteredFiles.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 bg-white/50 p-10 text-center dark:border-neutral-800 dark:bg-neutral-900/30">
-                        <FolderOpen className="h-10 w-10 text-neutral-300 dark:text-neutral-700" />
-                        <p className="mt-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                          {search ? "Nenhum arquivo corresponde à busca." : "Nenhum arquivo nesta pasta."}
+                      <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-[#1a1614]/15 bg-white/60 p-12 text-center antimetal-dots dark:border-white/10 dark:bg-[#201c19]/60">
+                        <FolderOpen className="h-10 w-10 text-[#736d67]/50 dark:text-[#9c968f]/50" />
+                        <p className="mt-3 font-serif text-lg text-[#1a1614] dark:text-[#fafbf7]">
+                          {search ? "Nenhum arquivo corresponde à busca." : "Nenhum documento nesta pasta."}
                         </p>
-                        <p className="mt-1 text-xs text-neutral-400 max-w-sm">
+                        <p className="mt-1 max-w-sm font-mono text-xs text-[#736d67] dark:text-[#9c968f]">
                           Arraste arquivos PDF, imagens, DOCX ou PPTX diretamente para cá para começar.
                         </p>
                         {isAdmin && (
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                            className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1a1614] px-4 py-2 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
                           >
-                            <UploadCloud className="h-4 w-4" />
-                            Enviar arquivo
+                            <UploadCloud className="h-3.5 w-3.5" />
+                            <span>ENVIAR ARQUIVO</span>
                           </button>
                         )}
                       </div>
                     ) : viewMode === "grid" ? (
                       /* Grade de Arquivos com Preview de Documento */
-                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                         {filteredFiles.map((file) => {
                           const fileMenuItems: ContextMenuItem[] = [
                             {
@@ -1245,7 +1365,7 @@ export default function ShowcaseApp({
                             {
                               id: "qr",
                               label: "Gerar QR Code",
-                              icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                              icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
                               onSelect: () => {
                                 setSelectedFileId(file.id);
                                 setQrScope("file");
@@ -1272,21 +1392,21 @@ export default function ShowcaseApp({
                             <ContextMenu key={file.id} items={fileMenuItems}>
                               <div
                                 onClick={() => setSelectedFileId(file.id)}
-                                className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                                className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-[#1a1614]/10 bg-white/90 p-3.5 shadow-2xs backdrop-blur-xs transition-all hover:-translate-y-0.5 hover:border-[#c96726]/40 hover:shadow-md dark:border-white/10 dark:bg-[#201c19]/90 dark:hover:border-[#d77435]/40"
                               >
                                 <div>
                                   {/* Preview do Documento no Card */}
-                                  <div className="relative mb-3 h-36 sm:h-40 w-full overflow-hidden rounded-lg border border-neutral-200/80 bg-neutral-100/70 dark:border-neutral-800 dark:bg-neutral-950">
+                                  <div className="relative mb-3 h-36 sm:h-40 w-full overflow-hidden rounded-xl border border-[#1a1614]/8 bg-[#f5f6f1] dark:border-white/8 dark:bg-[#161311]">
                                     <DocumentPreview file={file} />
 
                                     {/* Badge com a extensão */}
-                                    <span className="absolute left-2 top-2 rounded bg-neutral-900/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white shadow-xs backdrop-blur-xs dark:bg-neutral-100/90 dark:text-neutral-900">
+                                    <span className="absolute left-2.5 top-2.5 rounded-md bg-[#1a1614] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[#fafbf7] shadow-xs dark:bg-[#fafbf7] dark:text-[#1a1614]">
                                       {file.extension.toUpperCase() || "ARQ"}
                                     </span>
 
                                     {/* Ações no hover / mobile */}
                                     <div
-                                      className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/90 p-1 opacity-90 sm:opacity-0 shadow-xs backdrop-blur-xs transition sm:group-hover:opacity-100 dark:bg-neutral-900/90"
+                                      className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full border border-[#1a1614]/10 bg-white/90 p-1 opacity-90 sm:opacity-0 shadow-xs backdrop-blur-xs transition sm:group-hover:opacity-100 dark:border-white/10 dark:bg-[#1a1614]/90"
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <a
@@ -1294,7 +1414,7 @@ export default function ShowcaseApp({
                                         download={file.name}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="rounded p-1 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                                        className="rounded-full p-1 text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
                                         title="Baixar arquivo"
                                       >
                                         <Download className="h-3.5 w-3.5" />
@@ -1304,7 +1424,7 @@ export default function ShowcaseApp({
                                         trigger={
                                           <button
                                             type="button"
-                                            className="rounded p-1 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                                            className="rounded-full p-1 text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
                                             title="Mais opções"
                                           >
                                             <MoreVertical className="h-3.5 w-3.5" />
@@ -1315,7 +1435,7 @@ export default function ShowcaseApp({
                                         <button
                                           type="button"
                                           onClick={(e) => handleDeleteFile(e, file)}
-                                          className="rounded p-1 text-neutral-600 hover:bg-red-50 hover:text-red-600 dark:text-neutral-300 dark:hover:bg-red-950/40"
+                                          className="rounded-full p-1 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
                                           title="Excluir arquivo"
                                         >
                                           <Trash2 className="h-3.5 w-3.5" />
@@ -1326,14 +1446,14 @@ export default function ShowcaseApp({
 
                                   <div className="flex items-center gap-2">
                                     <FileCategoryIcon category={file.category} className="h-4 w-4 shrink-0" />
-                                    <p className="truncate text-xs sm:text-sm font-semibold text-neutral-900 dark:text-neutral-100" title={file.name}>
+                                    <p className="truncate font-sans text-xs sm:text-sm font-medium text-[#1a1614] dark:text-[#fafbf7]" title={file.name}>
                                       {file.name}
                                     </p>
                                   </div>
                                 </div>
 
-                                <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2 text-[11px] text-neutral-400 dark:border-neutral-800/60">
-                                  <span className="font-mono uppercase font-semibold text-neutral-500 dark:text-neutral-400">
+                                <div className="mt-3 flex items-center justify-between border-t border-dashed border-[#1a1614]/10 pt-2 font-mono text-[11px] text-[#736d67] dark:border-white/10 dark:text-[#9c968f]">
+                                  <span className="uppercase font-semibold text-[#c96726] dark:text-[#d77435]">
                                     {file.extension || "ARQ"}
                                   </span>
                                   <span>{formatBytes(file.size)}</span>
@@ -1345,7 +1465,7 @@ export default function ShowcaseApp({
                       </div>
                     ) : (
                       /* Lista de Arquivos */
-                      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
+                      <div className="divide-y divide-[#1a1614]/8 overflow-hidden rounded-2xl border border-[#1a1614]/10 bg-white/90 shadow-2xs dark:divide-white/8 dark:border-white/10 dark:bg-[#201c19]/90">
                         {filteredFiles.map((file) => {
                           const fileMenuItems: ContextMenuItem[] = [
                             {
@@ -1370,7 +1490,7 @@ export default function ShowcaseApp({
                             {
                               id: "qr",
                               label: "Gerar QR Code",
-                              icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                              icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
                               onSelect: () => {
                                 setSelectedFileId(file.id);
                                 setQrScope("file");
@@ -1397,15 +1517,15 @@ export default function ShowcaseApp({
                             <ContextMenu key={file.id} items={fileMenuItems}>
                               <div
                                 onClick={() => setSelectedFileId(file.id)}
-                                className="group flex cursor-pointer items-center justify-between p-3 text-xs transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                                className="group flex cursor-pointer items-center justify-between p-3 text-xs transition hover:bg-[#1a1614]/3 dark:hover:bg-white/3"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
                                   <FileCategoryIcon category={file.category} />
                                   <div className="min-w-0">
-                                    <p className="truncate font-medium text-neutral-900 dark:text-neutral-100">
+                                    <p className="truncate font-sans font-medium text-[#1a1614] dark:text-[#fafbf7]">
                                       {file.name}
                                     </p>
-                                    <p className="text-[10px] text-neutral-400">
+                                    <p className="font-mono text-[10px] text-[#736d67] dark:text-[#9c968f]">
                                       {file.extension.toUpperCase()} · {formatBytes(file.size)}
                                     </p>
                                   </div>
@@ -1418,7 +1538,7 @@ export default function ShowcaseApp({
                                   <a
                                     href={file.url}
                                     download={file.name}
-                                    className="rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                    className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
                                     title="Baixar"
                                   >
                                     <Download className="h-4 w-4" />
@@ -1428,7 +1548,7 @@ export default function ShowcaseApp({
                                     trigger={
                                       <button
                                         type="button"
-                                        className="rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                        className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
                                         title="Mais opções"
                                       >
                                         <MoreVertical className="h-4 w-4" />
@@ -1439,7 +1559,7 @@ export default function ShowcaseApp({
                                     <button
                                       type="button"
                                       onClick={(e) => handleDeleteFile(e, file)}
-                                      className="rounded p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                      className="rounded-full p-1.5 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
                                       title="Excluir"
                                     >
                                       <Trash2 className="h-4 w-4" />

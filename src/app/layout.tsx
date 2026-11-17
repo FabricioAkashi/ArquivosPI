@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Acervo PI — Visualizador de Projetos Acadêmicos",
+  title: "Acervo PI — Acervo Digital do Projeto Integrador",
   description:
-    "Portal minimalista para visualização e apresentação de arquivos de Projeto Integrador por semestre.",
+    "Portal minimalista para visualização e apresentação de projetos acadêmicos e relatórios de Projeto Integrador por semestre.",
 };
 
 const themeInitScript = `
@@ -31,7 +31,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="font-sans selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-900">
+      <body className="font-sans antialiased selection:bg-[#c96726] selection:text-white dark:selection:bg-[#d77435] dark:selection:text-white">
         {children}
       </body>
     </html>

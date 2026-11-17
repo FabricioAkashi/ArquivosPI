@@ -104,12 +104,12 @@ export default function ContextMenu({
                   top: `${position.y}px`,
                   left: `${position.x}px`,
                 }}
-                className="fixed z-[100] min-w-[180px] overflow-hidden rounded-xl border border-neutral-200 bg-white/95 p-1 text-xs shadow-2xl backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-900/95"
+                className="fixed z-[100] min-w-[180px] overflow-hidden rounded-2xl border border-[#1a1614]/15 bg-white/95 p-1 text-xs shadow-2xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95"
               >
                 {items.map((item) => (
                   <React.Fragment key={item.id}>
                     {item.separatorBefore && (
-                      <div className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+                      <div className="my-1 h-px bg-[#1a1614]/8 dark:bg-white/8" />
                     )}
                     <button
                       type="button"
@@ -118,10 +118,10 @@ export default function ContextMenu({
                         setOpen(false);
                         if (item.onSelect) item.onSelect();
                       }}
-                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium outline-none transition-colors ${
+                      className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs font-medium outline-none transition-colors ${
                         item.destructive
-                          ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                          : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                          ? "text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/15"
+                          : "text-[#1a1614] hover:bg-[#1a1614]/5 dark:text-[#fafbf7] dark:hover:bg-white/5"
                       } ${item.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                     >
                       {item.icon && (

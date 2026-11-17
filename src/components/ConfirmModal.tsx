@@ -54,7 +54,7 @@ export default function ConfirmModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl transition-all duration-200 dark:border-neutral-800 dark:bg-neutral-900"
+        className="w-full max-w-sm rounded-3xl border border-[#1a1614]/15 bg-white/95 p-6 shadow-2xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -62,11 +62,11 @@ export default function ConfirmModal({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
                 variant === "danger"
                   ? "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400"
                   : variant === "warning"
-                  ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
+                  ? "bg-[#c96726]/10 text-[#c96726] dark:bg-[#d77435]/20 dark:text-[#d77435]"
                   : "bg-sky-500/10 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400"
               }`}
             >
@@ -79,7 +79,7 @@ export default function ConfirmModal({
               )}
             </div>
             <div>
-              <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+              <h3 className="font-serif text-lg font-normal text-[#1a1614] dark:text-[#fafbf7]">
                 {title}
               </h3>
             </div>
@@ -88,14 +88,14 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            className="rounded-full p-1.5 text-[#736d67] hover:bg-[#1a1614]/5 dark:text-[#9c968f] dark:hover:bg-white/5"
             title="Fechar"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="mt-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
+        <p className="mt-3 text-xs leading-relaxed text-[#736d67] dark:text-[#9c968f]">
           {message}
         </p>
 
@@ -104,7 +104,7 @@ export default function ConfirmModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-2xs transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-800/80 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="rounded-full border border-[#1a1614]/15 bg-white/80 px-4 py-2 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#161311]/80 dark:text-[#fafbf7] dark:hover:bg-[#161311]"
             >
               {cancelText}
             </button>
@@ -129,10 +129,10 @@ export default function ConfirmModal({
                 }
                 onClose();
               }}
-              className={`rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-xs transition ${
+              className={`rounded-full px-5 py-2 font-mono text-xs font-medium text-white shadow-xs transition ${
                 variant === "warning"
-                  ? "bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
-                  : "bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                  ? "bg-[#c96726] hover:bg-[#b0581e]"
+                  : "bg-[#1a1614] hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
               }`}
             >
               {confirmText}

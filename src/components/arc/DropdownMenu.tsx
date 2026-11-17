@@ -45,22 +45,22 @@ export default function DropdownMenu({
         <DropdownPrimitive.Content
           align={align}
           sideOffset={6}
-          className="z-50 min-w-[160px] overflow-hidden rounded-xl border border-neutral-200 bg-white p-1 text-xs shadow-xl animate-in fade-in-0 zoom-in-95 dark:border-neutral-800 dark:bg-neutral-900"
+          className="z-50 min-w-[170px] overflow-hidden rounded-2xl border border-[#1a1614]/15 bg-white/95 p-1 text-xs shadow-xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 dark:border-white/15 dark:bg-[#201c19]/95"
         >
           {items.map((item) => (
             <React.Fragment key={item.id}>
               {item.separatorBefore && (
-                <DropdownPrimitive.Separator className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+                <DropdownPrimitive.Separator className="my-1 h-px bg-[#1a1614]/8 dark:bg-white/8" />
               )}
               <DropdownPrimitive.Item
                 disabled={item.disabled}
                 onSelect={(e) => {
                   if (item.onSelect) item.onSelect();
                 }}
-                className={`relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium outline-none transition-colors ${
+                className={`relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium outline-none transition-colors ${
                   item.destructive
-                    ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                    : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                    ? "text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/15"
+                    : "text-[#1a1614] hover:bg-[#1a1614]/5 dark:text-[#fafbf7] dark:hover:bg-white/5"
                 } ${item.disabled ? "opacity-50 pointer-events-none" : ""}`}
               >
                 {item.icon && <span className="h-3.5 w-3.5 shrink-0">{item.icon}</span>}

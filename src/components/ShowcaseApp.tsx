@@ -42,13 +42,16 @@ import FolderModal from "./FolderModal";
 import ThemeToggle from "./ThemeToggle";
 import DocumentPreview from "./DocumentPreview";
 import FolderCarousel from "./FolderCarousel";
+import ConfirmModal, { ConfirmDialogState } from "./ConfirmModal";
 
 interface ShowcaseAppProps {
   initialSemesters: Semester[];
   initialFolders: Folder[];
   initialFiles: FileItem[];
   initialSemesterId?: string;
+  initialFolderId?: string;
   initialFileId?: string;
+  initialScope?: "all" | "semester" | "folder" | "file";
   initialAuthenticated: boolean;
   usingDefaultPin: boolean;
   storageMode: "cloud" | "local";
@@ -82,7 +85,9 @@ export default function ShowcaseApp({
   initialFolders,
   initialFiles,
   initialSemesterId,
+  initialFolderId,
   initialFileId,
+  initialScope,
   initialAuthenticated,
   usingDefaultPin,
   storageMode,
@@ -92,6 +97,11 @@ export default function ShowcaseApp({
   const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [files, setFiles] = useState<FileItem[]>(initialFiles);
   const [isAdmin, setIsAdmin] = useState(initialAuthenticated);
+
+  // Controle de Acesso Restrito via Link/QR Code
+  const [isLockedScope, setIsLockedScope] = useState<boolean>(() => {
+    return initialScope === "folder" || initialScope === "semester";
+  });
 
   // Sidebar recolhida por padrão como solicitado
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -109,6 +119,9 @@ export default function ShowcaseApp({
   });
 
   const [activeFolderId, setActiveFolderId] = useState<string | null>(() => {
+    if (initialFolderId && initialFolders.some((f) => f.id === initialFolderId)) {
+      return initialFolderId;
+    }
     if (initialFileId) {
       const match = initialFiles.find((f) => f.id === initialFileId);
       if (match?.folderId) return match.folderId;
@@ -125,12 +138,57 @@ export default function ShowcaseApp({
 
   // Modais
   const [qrOpen, setQrOpen] = useState(false);
-  const [qrScope, setQrScope] = useState<"semester" | "file">("semester");
+  const [qrScope, setQrScope] = useState<"all" | "semester" | "folder" | "file">("all");
   const [pinOpen, setPinOpen] = useState(false);
   const [semesterModalOpen, setSemesterModalOpen] = useState(false);
   const [editingSemester, setEditingSemester] = useState<Semester | null>(null);
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+
+  // Popup de confirmação customizado (substitui window.confirm e alert)
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+    open: false,
+    title: "",
+    message: "",
+    variant: "danger",
+  });
+
+  const showConfirm = ({
+    title,
+    message,
+    confirmText = "Confirmar",
+    cancelText = "Cancelar",
+    variant = "danger",
+    onConfirm,
+  }: {
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: "danger" | "warning" | "info";
+    onConfirm: () => void | Promise<void>;
+  }) => {
+    setConfirmDialog({
+      open: true,
+      title,
+      message,
+      confirmText,
+      cancelText,
+      variant,
+      onConfirm,
+    });
+  };
+
+  const showAlert = (title: string, message: string, variant: "warning" | "info" = "warning") => {
+    setConfirmDialog({
+      open: true,
+      title,
+      message,
+      confirmText: "Entendi",
+      variant,
+      onConfirm: undefined,
+    });
+  };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
@@ -302,7 +360,11 @@ export default function ShowcaseApp({
       }
 
       if (!activeSemesterId) {
-        alert("Abra um semestre antes de enviar arquivos.");
+        showAlert(
+          "Selecione um Semestre",
+          "Abra um semestre antes de enviar arquivos para que eles fiquem devidamente organizados.",
+          "warning"
+        );
         return;
       }
 
@@ -331,49 +393,67 @@ export default function ShowcaseApp({
     [isAdmin, activeSemesterId, uploadSingleFile]
   );
 
-  const handleDeleteFile = async (e: React.MouseEvent, file: FileItem) => {
+  const handleDeleteFile = (e: React.MouseEvent, file: FileItem) => {
     e.stopPropagation();
-    if (!window.confirm(`Remover "${file.name}"?`)) return;
-
-    const res = await fetch(`/api/files/${file.id}`, { method: "DELETE" });
-    if (res.ok) {
-      setFiles((prev) => prev.filter((f) => f.id !== file.id));
-      if (selectedFileId === file.id) {
-        setSelectedFileId(null);
-      }
-    }
+    showConfirm({
+      title: "Excluir arquivo",
+      message: `Tem certeza que deseja remover o arquivo "${file.name}"? Esta ação não pode ser desfeita.`,
+      confirmText: "Excluir",
+      variant: "danger",
+      onConfirm: async () => {
+        const res = await fetch(`/api/files/${file.id}`, { method: "DELETE" });
+        if (res.ok) {
+          setFiles((prev) => prev.filter((f) => f.id !== file.id));
+          if (selectedFileId === file.id) {
+            setSelectedFileId(null);
+          }
+        }
+      },
+    });
   };
 
-  const handleDeleteFolder = async (e: React.MouseEvent, fld: Folder) => {
+  const handleDeleteFolder = (e: React.MouseEvent, fld: Folder) => {
     e.stopPropagation();
-    if (!window.confirm(`Excluir a pasta "${fld.name}" e todos os seus arquivos?`)) return;
-
-    const res = await fetch(`/api/folders/${fld.id}`, { method: "DELETE" });
-    if (res.ok) {
-      setFolders((prev) => prev.filter((f) => f.id !== fld.id && f.parentId !== fld.id));
-      setFiles((prev) => prev.filter((file) => file.folderId !== fld.id));
-      if (activeFolderId === fld.id) {
-        setActiveFolderId(null);
-      }
-    }
+    showConfirm({
+      title: "Excluir pasta",
+      message: `Tem certeza que deseja excluir a pasta "${fld.name}" e todos os seus arquivos e subpastas?`,
+      confirmText: "Excluir pasta",
+      variant: "danger",
+      onConfirm: async () => {
+        const res = await fetch(`/api/folders/${fld.id}`, { method: "DELETE" });
+        if (res.ok) {
+          setFolders((prev) => prev.filter((f) => f.id !== fld.id && f.parentId !== fld.id));
+          setFiles((prev) => prev.filter((file) => file.folderId !== fld.id));
+          if (activeFolderId === fld.id) {
+            setActiveFolderId(null);
+          }
+        }
+      },
+    });
   };
 
-  const handleDeleteSemester = async (e: React.MouseEvent, sem: Semester) => {
+  const handleDeleteSemester = (e: React.MouseEvent, sem: Semester) => {
     e.stopPropagation();
-    if (!window.confirm(`Excluir o semestre "${sem.name}" e todo o seu conteúdo?`)) return;
-
-    const res = await fetch(`/api/semesters/${sem.id}`, { method: "DELETE" });
-    if (res.ok) {
-      const remaining = semesters.filter((s) => s.id !== sem.id);
-      setSemesters(remaining);
-      setFolders((prev) => prev.filter((f) => f.semesterId !== sem.id));
-      setFiles((prev) => prev.filter((f) => f.semesterId !== sem.id));
-      if (activeSemesterId === sem.id) {
-        setActiveSemesterId(null);
-        setActiveFolderId(null);
-        setSelectedFileId(null);
-      }
-    }
+    showConfirm({
+      title: "Excluir semestre",
+      message: `Tem certeza que deseja excluir o semestre "${sem.name}" e todo o seu conteúdo (pastas e arquivos)?`,
+      confirmText: "Excluir semestre",
+      variant: "danger",
+      onConfirm: async () => {
+        const res = await fetch(`/api/semesters/${sem.id}`, { method: "DELETE" });
+        if (res.ok) {
+          const remaining = semesters.filter((s) => s.id !== sem.id);
+          setSemesters(remaining);
+          setFolders((prev) => prev.filter((f) => f.semesterId !== sem.id));
+          setFiles((prev) => prev.filter((f) => f.semesterId !== sem.id));
+          if (activeSemesterId === sem.id) {
+            setActiveSemesterId(null);
+            setActiveFolderId(null);
+            setSelectedFileId(null);
+          }
+        }
+      },
+    });
   };
 
   const handleLockToggle = async () => {
@@ -461,25 +541,39 @@ export default function ShowcaseApp({
 
           {/* Breadcrumbs de Navegação estilo Explorador */}
           <nav className="flex min-w-0 items-center gap-1.5 text-xs sm:text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveSemesterId(null);
-                setActiveFolderId(null);
-                setSelectedFileId(null);
-              }}
-              className="flex items-center gap-1 font-semibold text-neutral-900 transition hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
-            >
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">Início</span>
-            </button>
+            {isLockedScope && !isAdmin ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
+                <Lock className="h-3 w-3 shrink-0" />
+                <span className="truncate">
+                  {initialScope === "folder" && activeFolder
+                    ? `Pasta autorizada: ${activeFolder.name}`
+                    : initialScope === "semester" && activeSemester
+                    ? `Semestre autorizado: ${activeSemester.name}`
+                    : "Acesso Restrito"}
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSemesterId(null);
+                  setActiveFolderId(null);
+                  setSelectedFileId(null);
+                }}
+                className="flex items-center gap-1 font-semibold text-neutral-900 transition hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
+              >
+                <Home className="h-4 w-4" />
+                <span className="hidden sm:inline">Início</span>
+              </button>
+            )}
 
-            {activeSemester && (
+            {(!isLockedScope || isAdmin || initialScope !== "folder") && activeSemester && (
               <>
                 <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />
                 <button
                   type="button"
                   onClick={() => {
+                    if (isLockedScope && !isAdmin && initialScope === "folder") return;
                     setActiveFolderId(null);
                     setSelectedFileId(null);
                   }}
@@ -519,6 +613,17 @@ export default function ShowcaseApp({
                 </span>
               </>
             )}
+
+            {isLockedScope && isAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsLockedScope(false)}
+                className="ml-2 hidden sm:inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300"
+                title="Você é admin: clique para liberar a visualização de todo o acervo"
+              >
+                <span>Desbloquear tudo</span>
+              </button>
+            )}
           </nav>
         </div>
 
@@ -526,11 +631,11 @@ export default function ShowcaseApp({
           <button
             type="button"
             onClick={() => {
-              setQrScope(selectedFile ? "file" : "semester");
+              setQrScope(selectedFile ? "file" : activeFolder ? "folder" : activeSemester ? "semester" : "all");
               setQrOpen(true);
             }}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-900"
-            title="Gerar QR Code para compartilhar"
+            title="Gerar QR Code de acesso"
           >
             <QrCode className="h-4 w-4" />
             <span className="hidden sm:inline">QR Code</span>
@@ -602,30 +707,32 @@ export default function ShowcaseApp({
 
           {/* Links e Pastas Rápidas no Sidebar */}
           <div className="flex-1 overflow-y-auto p-3 space-y-4">
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveSemesterId(null);
-                  setActiveFolderId(null);
-                  setSelectedFileId(null);
-                  if (window.innerWidth < 1024) setSidebarOpen(false);
-                }}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                  !activeSemesterId
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                    : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-900"
-                }`}
-              >
-                <Home className="h-4 w-4" />
-                <span>Início (Todos os Semestres)</span>
-              </button>
-            </div>
+            {(!isLockedScope || isAdmin) && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSemesterId(null);
+                    setActiveFolderId(null);
+                    setSelectedFileId(null);
+                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                    !activeSemesterId
+                      ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                      : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                  }`}
+                >
+                  <Home className="h-4 w-4" />
+                  <span>Início (Todos os Semestres)</span>
+                </button>
+              </div>
+            )}
 
             <div>
               <div className="mb-2 flex items-center justify-between px-1">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                  Semestres ({semesters.length})
+                  {isLockedScope && !isAdmin ? "Semestre Autorizado" : `Semestres (${semesters.length})`}
                 </span>
                 {isAdmin && (
                   <button
@@ -643,7 +750,9 @@ export default function ShowcaseApp({
               </div>
 
               <div className="space-y-1">
-                {semesters.map((sem) => {
+                {semesters
+                  .filter((sem) => !isLockedScope || isAdmin || sem.id === activeSemesterId)
+                  .map((sem) => {
                   const active = sem.id === activeSemesterId;
                   const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
                   const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
@@ -721,13 +830,21 @@ export default function ShowcaseApp({
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   {/* Botão de Voltar ao nível anterior */}
-                  {(activeFolderId || activeSemesterId) && (
+                  {(
+                    (activeFolderId && (!isLockedScope || isAdmin || initialScope !== "folder" || activeFolderId !== initialFolderId)) ||
+                    (activeSemesterId && (!isLockedScope || isAdmin || initialScope !== "semester"))
+                  ) && (
                     <button
                       type="button"
                       onClick={() => {
                         if (activeFolderId) {
-                          setActiveFolderId(null);
-                        } else {
+                          const currentFld = folders.find((f) => f.id === activeFolderId);
+                          if (currentFld?.parentId) {
+                            setActiveFolderId(currentFld.parentId);
+                          } else if (!isLockedScope || isAdmin || initialScope !== "folder") {
+                            setActiveFolderId(null);
+                          }
+                        } else if (!isLockedScope || isAdmin || initialScope !== "semester") {
                           setActiveSemesterId(null);
                         }
                       }}
@@ -1029,6 +1146,17 @@ export default function ShowcaseApp({
                     </div>
                   )}
 
+                  {/* Carrossel de Pré-visualização da Pasta Aberta (se não houver arquivos, não aparece) */}
+                  {currentLevelFiles.length > 0 && (
+                    <div className="rounded-2xl border border-neutral-200/90 bg-white/80 p-4 shadow-xs backdrop-blur-xs dark:border-neutral-800 dark:bg-neutral-900/60">
+                      <FolderCarousel
+                        files={currentLevelFiles}
+                        onSelectFile={(id) => setSelectedFileId(id)}
+                        title={`Carrossel de Arquivos — ${activeFolder ? activeFolder.name : activeSemester?.name}`}
+                      />
+                    </div>
+                  )}
+
                   {/* Seção de Arquivos */}
                   <div>
                     <div className="mb-3 flex items-center justify-between">
@@ -1187,9 +1315,23 @@ export default function ShowcaseApp({
       <QrCodeModal
         open={qrOpen}
         onClose={() => setQrOpen(false)}
-        semester={activeSemester}
+        semesters={semesters}
+        folders={folders}
+        activeSemester={activeSemester}
+        activeFolder={activeFolder}
         file={selectedFile}
         initialScope={qrScope}
+      />
+
+      <ConfirmModal
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        cancelText={confirmDialog.cancelText}
+        variant={confirmDialog.variant}
+        onConfirm={confirmDialog.onConfirm}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
       />
 
       <PinModal

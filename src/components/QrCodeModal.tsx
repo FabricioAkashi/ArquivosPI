@@ -1,33 +1,138 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Check, Copy, Download, X } from "lucide-react";
-import { FileItem, Semester } from "@/lib/types";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Download,
+  FileText,
+  Folder as FolderIcon,
+  Globe,
+  Layers,
+  Lock,
+  Search,
+  X,
+} from "lucide-react";
+import { FileItem, Folder, Semester } from "@/lib/types";
 
 interface QrCodeModalProps {
   open: boolean;
   onClose: () => void;
-  semester: Semester | null;
+  semesters: Semester[];
+  folders: Folder[];
+  activeSemester: Semester | null;
+  activeFolder: Folder | null;
   file: FileItem | null;
-  initialScope?: "semester" | "file";
+  initialScope?: "all" | "semester" | "folder" | "file";
+}
+
+interface ScopeOption {
+  id: string;
+  type: "all" | "semester" | "folder" | "file";
+  label: string;
+  subtitle: string;
+  semesterId?: string;
+  folderId?: string;
+  fileId?: string;
 }
 
 export default function QrCodeModal({
   open,
   onClose,
-  semester,
+  semesters,
+  folders,
+  activeSemester,
+  activeFolder,
   file,
-  initialScope = "semester",
+  initialScope,
 }: QrCodeModalProps) {
-  const [scope, setScope] = useState<"semester" | "file">(initialScope);
   const [origin, setOrigin] = useState("");
   const [copied, setCopied] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const qrWrapRef = useRef<HTMLDivElement | null>(null);
 
+  // Monta a lista completa de opções de escopo
+  const allOptions: ScopeOption[] = useMemo(() => {
+    const list: ScopeOption[] = [
+      {
+        id: "all",
+        type: "all",
+        label: "Acesso Total (Todo o Acervo)",
+        subtitle: "Permite navegar livremente por todos os semestres e pastas",
+      },
+    ];
+
+    // Semestres
+    for (const sem of semesters) {
+      list.push({
+        id: `sem:${sem.id}`,
+        type: "semester",
+        label: `Semestre ${sem.name}`,
+        subtitle: sem.title ? `${sem.title} (Apenas este semestre)` : "Apenas este semestre",
+        semesterId: sem.id,
+      });
+    }
+
+    // Pastas
+    for (const fld of folders) {
+      const parentSem = semesters.find((s) => s.id === fld.semesterId);
+      const semPrefix = parentSem ? `${parentSem.name} › ` : "";
+      list.push({
+        id: `fld:${fld.id}`,
+        type: "folder",
+        label: `Pasta: ${fld.name}`,
+        subtitle: `${semPrefix}Acesso exclusivo a esta pasta`,
+        semesterId: fld.semesterId,
+        folderId: fld.id,
+      });
+    }
+
+    // Arquivo selecionado (se houver)
+    if (file) {
+      list.push({
+        id: `file:${file.id}`,
+        type: "file",
+        label: `Arquivo: ${file.name}`,
+        subtitle: "Abre diretamente este documento no visualizador",
+        semesterId: file.semesterId,
+        folderId: file.folderId || undefined,
+        fileId: file.id,
+      });
+    }
+
+    return list;
+  }, [semesters, folders, file]);
+
+  // Define a opção inicial padrão baseada no contexto atual do usuário
+  const defaultOption = useMemo<ScopeOption>(() => {
+    if (initialScope === "file" && file) {
+      const opt = allOptions.find((o) => o.id === `file:${file.id}`);
+      if (opt) return opt;
+    }
+    if (activeFolder) {
+      const opt = allOptions.find((o) => o.id === `fld:${activeFolder.id}`);
+      if (opt) return opt;
+    }
+    if (activeSemester) {
+      const opt = allOptions.find((o) => o.id === `sem:${activeSemester.id}`);
+      if (opt) return opt;
+    }
+    return allOptions[0];
+  }, [allOptions, initialScope, file, activeFolder, activeSemester]);
+
+  const [selectedOption, setSelectedOption] = useState<ScopeOption>(defaultOption);
+
   useEffect(() => {
-    setScope(initialScope);
-  }, [initialScope, open]);
+    if (open) {
+      setSelectedOption(defaultOption);
+      setSearchQuery("");
+      setDropdownOpen(false);
+    }
+  }, [open, defaultOption]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -35,27 +140,58 @@ export default function QrCodeModal({
     }
   }, [open]);
 
+  // Fecha o dropdown se clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filtra as opções de acordo com o que o usuário digita
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return allOptions;
+    const q = searchQuery.toLowerCase();
+    return allOptions.filter(
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        o.subtitle.toLowerCase().includes(q)
+    );
+  }, [allOptions, searchQuery]);
+
   if (!open) return null;
 
+  // Constrói a URL de acordo com o escopo selecionado
+  const cleanOrigin = origin.replace(/\/+$/, "");
+  let targetUrl = `${cleanOrigin}/`;
   const params = new URLSearchParams();
-  if (semester) params.set("s", semester.id);
-  if (scope === "file" && file) params.set("f", file.id);
+
+  if (selectedOption.type === "semester" && selectedOption.semesterId) {
+    params.set("s", selectedOption.semesterId);
+    params.set("scope", "semester");
+  } else if (selectedOption.type === "folder" && selectedOption.semesterId && selectedOption.folderId) {
+    params.set("s", selectedOption.semesterId);
+    params.set("d", selectedOption.folderId);
+    params.set("scope", "folder");
+  } else if (selectedOption.type === "file" && selectedOption.fileId) {
+    if (selectedOption.semesterId) params.set("s", selectedOption.semesterId);
+    if (selectedOption.folderId) params.set("d", selectedOption.folderId);
+    params.set("f", selectedOption.fileId);
+    params.set("scope", "file");
+  }
 
   const query = params.toString();
-  const cleanOrigin = origin.replace(/\/+$/, "");
-  const targetUrl = `${cleanOrigin}/${query ? `?${query}` : ""}`;
-
-  const label =
-    scope === "file" && file
-      ? file.name
-      : semester
-      ? `${semester.name} — ${semester.title}`
-      : "Acervo PI";
+  if (query) {
+    targetUrl = `${cleanOrigin}/?${query}`;
+  }
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(targetUrl);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadPng = () => {
@@ -76,129 +212,233 @@ export default function QrCodeModal({
     ctx.drawImage(sourceCanvas, padding, padding);
 
     ctx.fillStyle = "#171717";
-    ctx.font = "600 14px Inter, system-ui, sans-serif";
+    ctx.font = "600 13px Inter, system-ui, sans-serif";
     ctx.textAlign = "center";
-    const truncated = label.length > 34 ? `${label.slice(0, 31)}...` : label;
+    const label = selectedOption.label;
+    const truncated = label.length > 36 ? `${label.slice(0, 33)}...` : label;
     ctx.fillText(
       truncated,
       exportCanvas.width / 2,
-      sourceCanvas.height + padding + 28
+      sourceCanvas.height + padding + 26
     );
 
     const link = document.createElement("a");
-    link.download = `qrcode-${semester?.id || "acervo"}.png`;
+    link.download = `qrcode-${selectedOption.type}-${selectedOption.id.replace(/[^a-zA-Z0-9_-]/g, "")}.png`;
     link.href = exportCanvas.toDataURL("image/png");
     link.click();
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+        className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6 shadow-2xl transition-all dark:border-neutral-800 dark:bg-neutral-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            QR Code de Acesso
-          </h3>
+        {/* Cabeçalho */}
+        <div className="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
+          <div>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+              Compartilhar Acesso com QR Code
+            </h3>
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+              Defina se o visitante terá acesso a todo o acervo ou apenas a uma pasta específica.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            title="Fechar"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {file && (
-          <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-neutral-200 p-1 text-xs dark:border-neutral-800">
-            <button
-              type="button"
-              onClick={() => setScope("semester")}
-              className={`rounded-md py-1.5 font-medium transition ${
-                scope === "semester"
-                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                  : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-              }`}
-            >
-              Semestre inteiro
-            </button>
-            <button
-              type="button"
-              onClick={() => setScope("file")}
-              className={`rounded-md py-1.5 font-medium transition ${
-                scope === "file"
-                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                  : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-              }`}
-            >
-              Este arquivo
-            </button>
-          </div>
-        )}
+        {/* Seletor de Escopo com Dropdown Pesquisável */}
+        <div className="mt-4" ref={dropdownRef}>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            Escopo do Acesso (O que o visitante verá)
+          </label>
 
+          <div className="relative mt-1.5">
+            <button
+              type="button"
+              onClick={() => setDropdownOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between rounded-xl border border-neutral-300 bg-neutral-50/70 px-3.5 py-2.5 text-left text-xs transition hover:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-800/80 dark:hover:border-neutral-600"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                {selectedOption.type === "all" ? (
+                  <Globe className="h-4 w-4 shrink-0 text-sky-500" />
+                ) : selectedOption.type === "semester" ? (
+                  <Layers className="h-4 w-4 shrink-0 text-amber-500" />
+                ) : selectedOption.type === "folder" ? (
+                  <FolderIcon className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-blue-500" />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-neutral-900 dark:text-neutral-100">
+                    {selectedOption.label}
+                  </p>
+                  <p className="truncate text-[10px] text-neutral-500 dark:text-neutral-400">
+                    {selectedOption.subtitle}
+                  </p>
+                </div>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" />
+            </button>
+
+            {/* Menu Dropdown com Campo de Busca e Sugestões */}
+            {dropdownOpen && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+                {/* Campo de pesquisa dentro do dropdown */}
+                <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50/80 px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950/60">
+                  <Search className="h-3.5 w-3.5 text-neutral-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Digite para filtrar pastas ou semestres..."
+                    className="w-full bg-transparent text-xs outline-none placeholder:text-neutral-400 dark:text-neutral-100"
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="text-neutral-400 hover:text-neutral-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Lista de Sugestões */}
+                <div className="max-h-52 overflow-y-auto p-1 text-xs divide-y divide-neutral-100 dark:divide-neutral-800/60">
+                  {filteredOptions.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-neutral-400">
+                      Nenhuma pasta ou semestre corresponde a &quot;{searchQuery}&quot;
+                    </div>
+                  ) : (
+                    filteredOptions.map((opt) => {
+                      const isSelected = opt.id === selectedOption.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedOption(opt);
+                            setDropdownOpen(false);
+                            setSearchQuery("");
+                          }}
+                          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition ${
+                            isSelected
+                              ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-semibold"
+                              : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                          }`}
+                        >
+                          {opt.type === "all" ? (
+                            <Globe className={`h-4 w-4 shrink-0 ${isSelected ? "text-white dark:text-neutral-900" : "text-sky-500"}`} />
+                          ) : opt.type === "semester" ? (
+                            <Layers className={`h-4 w-4 shrink-0 ${isSelected ? "text-white dark:text-neutral-900" : "text-amber-500"}`} />
+                          ) : opt.type === "folder" ? (
+                            <FolderIcon className={`h-4 w-4 shrink-0 ${isSelected ? "text-white dark:text-neutral-900" : "text-amber-600 dark:text-amber-400"}`} />
+                          ) : (
+                            <FileText className={`h-4 w-4 shrink-0 ${isSelected ? "text-white dark:text-neutral-900" : "text-blue-500"}`} />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{opt.label}</p>
+                            <p className={`truncate text-[10px] ${isSelected ? "opacity-80" : "text-neutral-400"}`}>
+                              {opt.subtitle}
+                            </p>
+                          </div>
+                          {isSelected && <Check className="h-4 w-4 shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Aviso de Proteção de Escopo */}
+          {selectedOption.type !== "all" && (
+            <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
+              <Lock className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <strong>Acesso restrito:</strong> O visitante só poderá visualizar arquivos desta pasta. O restante do acervo ficará oculto.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Área do QR Code com Borda e Sombra */}
         <div className="mt-4 flex flex-col items-center">
           <div
             ref={qrWrapRef}
-            className="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs"
+            className="flex items-center justify-center rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-white"
           >
             <QRCodeCanvas
               value={targetUrl}
-              size={200}
-              level="M"
+              size={190}
+              level="H"
+              includeMargin={false}
               bgColor="#ffffff"
-              fgColor="#111111"
+              fgColor="#171717"
             />
           </div>
-          <p className="mt-2.5 max-w-full truncate text-xs font-medium text-neutral-700 dark:text-neutral-300">
-            {label}
+
+          <p className="mt-2.5 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+            {selectedOption.label}
           </p>
         </div>
 
-        <div className="mt-4">
-          <label className="mb-1 block text-[11px] text-neutral-500 dark:text-neutral-400">
-            Domínio / URL base
-          </label>
-          <input
-            type="text"
-            value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-            className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 font-mono text-xs text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200"
-          />
-          <p className="mt-1 truncate font-mono text-[11px] text-neutral-400">
-            {targetUrl}
-          </p>
-        </div>
+        {/* Link e Ações */}
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-800/80 dark:text-neutral-300">
+            <span className="truncate flex-1 font-mono text-[11px]">
+              {targetUrl}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1 rounded-md bg-neutral-200/80 px-2 py-1 text-[11px] font-semibold text-neutral-800 transition hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-600"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3 w-3 text-emerald-500" />
+                  <span>Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  <span>Copiar</span>
+                </>
+              )}
+            </button>
+          </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-800 transition hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-800"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3.5 w-3.5 text-emerald-500" />
-                <span>Copiado!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-3.5 w-3.5" />
-                <span>Copiar link</span>
-              </>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={handleDownloadPng}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Baixar PNG</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadPng}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white py-2 text-xs font-semibold text-neutral-700 shadow-2xs transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Baixar Imagem PNG</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+            >
+              Concluído
+            </button>
+          </div>
         </div>
       </div>
     </div>

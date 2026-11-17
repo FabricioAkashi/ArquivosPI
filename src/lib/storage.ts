@@ -141,7 +141,13 @@ export async function writeDb(db: Database): Promise<void> {
   await ensureLocalDirs();
   const tempFile = `${DB_FILE}.${crypto.randomUUID()}.tmp`;
   await fs.writeFile(tempFile, payload, "utf-8");
-  await fs.rename(tempFile, DB_FILE);
+  try {
+    await fs.rename(tempFile, DB_FILE);
+  } catch {
+    // Fallback robusto para Windows / OneDrive quando o arquivo de destino é temporariamente bloqueado
+    await fs.writeFile(DB_FILE, payload, "utf-8");
+    await fs.unlink(tempFile).catch(() => {});
+  }
 }
 
 export async function createSemester(input: {

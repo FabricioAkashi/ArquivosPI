@@ -87,6 +87,15 @@ export default function DocxViewer({ url, name }: DocxViewerProps) {
           useBase64URL: false,
         });
 
+        // Ajuste automático de zoom no carregamento para caber na tela do celular/desktop
+        if (containerRef.current) {
+          const availableWidth = containerRef.current.clientWidth - 24;
+          if (availableWidth > 0 && availableWidth < 820) {
+            const autoZoom = Math.min(1, Math.max(0.35, +(availableWidth / 830).toFixed(2)));
+            setZoom(autoZoom);
+          }
+        }
+
         // Pós-processamento para garantir que qualquer imagem com data URL sem MIME seja corrigida
         if (containerRef.current) {
           const imgs = containerRef.current.querySelectorAll("img");
@@ -119,6 +128,15 @@ export default function DocxViewer({ url, name }: DocxViewerProps) {
     };
   }, [url, officeMode]);
 
+  const fitToScreen = () => {
+    if (!containerRef.current) return;
+    const availableWidth = containerRef.current.clientWidth - 24;
+    if (availableWidth > 0) {
+      const autoZoom = Math.min(1.2, Math.max(0.35, +(availableWidth / 830).toFixed(2)));
+      setZoom(autoZoom);
+    }
+  };
+
   const officeEmbedUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
     absoluteUrl
   )}`;
@@ -147,6 +165,14 @@ export default function DocxViewer({ url, name }: DocxViewerProps) {
               title="Aumentar zoom"
             >
               <ZoomIn className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={fitToScreen}
+              className="rounded-md px-2 py-1 text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              title="Ajustar à largura da tela"
+            >
+              Ajustar
             </button>
             <button
               type="button"

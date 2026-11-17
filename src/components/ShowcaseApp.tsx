@@ -3,16 +3,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ChevronRight,
+  Download,
   Edit3,
   FileCode2,
   FileSpreadsheet,
   FileText,
   Film,
+  Folder as FolderIcon,
   FolderOpen,
+  FolderPlus,
+  Home,
   Image as ImageIcon,
+  LayoutGrid,
+  List,
   Loader2,
   Lock,
   Music,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Presentation,
   QrCode,
@@ -20,18 +29,21 @@ import {
   Trash2,
   Unlock,
   UploadCloud,
+  X,
 } from "lucide-react";
 import { upload as blobUpload } from "@vercel/blob/client";
-import { FileCategory, FileItem, Semester } from "@/lib/types";
+import { FileCategory, FileItem, Folder, Semester } from "@/lib/types";
 import { formatBytes } from "@/lib/file-utils";
 import FileViewer from "./viewers/FileViewer";
 import QrCodeModal from "./QrCodeModal";
 import PinModal from "./PinModal";
 import SemesterModal from "./SemesterModal";
+import FolderModal from "./FolderModal";
 import ThemeToggle from "./ThemeToggle";
 
 interface ShowcaseAppProps {
   initialSemesters: Semester[];
+  initialFolders: Folder[];
   initialFiles: FileItem[];
   initialSemesterId?: string;
   initialFileId?: string;
@@ -41,8 +53,8 @@ interface ShowcaseAppProps {
   blobAccess: "private" | "public";
 }
 
-function FileCategoryIcon({ category }: { category: FileCategory }) {
-  const cls = "h-4 w-4 shrink-0";
+function FileCategoryIcon({ category, className = "h-5 w-5" }: { category: FileCategory; className?: string }) {
+  const cls = `${className} shrink-0`;
   switch (category) {
     case "pdf":
       return <FileText className={`${cls} text-rose-500`} />;
@@ -65,6 +77,7 @@ function FileCategoryIcon({ category }: { category: FileCategory }) {
 
 export default function ShowcaseApp({
   initialSemesters,
+  initialFolders,
   initialFiles,
   initialSemesterId,
   initialFileId,
@@ -74,117 +87,139 @@ export default function ShowcaseApp({
   blobAccess,
 }: ShowcaseAppProps) {
   const [semesters, setSemesters] = useState<Semester[]>(initialSemesters);
+  const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [files, setFiles] = useState<FileItem[]>(initialFiles);
   const [isAdmin, setIsAdmin] = useState(initialAuthenticated);
 
-  const resolvedInitialSemester =
-    semesters.find((s) => s.id === initialSemesterId)?.id ||
-    semesters[0]?.id ||
-    "";
+  // Sidebar recolhida por padrão como solicitado
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [activeSemesterId, setActiveSemesterId] = useState<string>(
-    resolvedInitialSemester
-  );
-
-  const [selectedFileId, setSelectedFileId] = useState<string | null>(() => {
-    if (initialFileId && initialFiles.some((f) => f.id === initialFileId)) {
-      return initialFileId;
+  // Navegação no estilo gerenciador de arquivos (Início -> Semestre -> Pasta)
+  const [activeSemesterId, setActiveSemesterId] = useState<string | null>(() => {
+    if (initialSemesterId && initialSemesters.some((s) => s.id === initialSemesterId)) {
+      return initialSemesterId;
+    }
+    if (initialFileId) {
+      const match = initialFiles.find((f) => f.id === initialFileId);
+      if (match) return match.semesterId;
     }
     return null;
   });
 
-  // On desktop, auto-select first file if none selected via URL
-  const [mobileShowViewer, setMobileShowViewer] = useState<boolean>(
-    Boolean(initialFileId)
-  );
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(() => {
+    if (initialFileId) {
+      const match = initialFiles.find((f) => f.id === initialFileId);
+      if (match?.folderId) return match.folderId;
+    }
+    return null;
+  });
+
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(initialFileId || null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Modals
+  // Modais
   const [qrOpen, setQrOpen] = useState(false);
   const [qrScope, setQrScope] = useState<"semester" | "file">("semester");
   const [pinOpen, setPinOpen] = useState(false);
   const [semesterModalOpen, setSemesterModalOpen] = useState(false);
   const [editingSemester, setEditingSemester] = useState<Semester | null>(null);
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
+
+  // Sincronização limpa de URL
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    if (activeSemesterId) params.set("s", activeSemesterId);
+    if (activeFolderId) params.set("d", activeFolderId);
+    if (selectedFileId) params.set("f", selectedFileId);
+    const qs = params.toString();
+    const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, "", nextUrl);
+  }, [activeSemesterId, activeFolderId, selectedFileId]);
 
   const activeSemester = useMemo(
     () => semesters.find((s) => s.id === activeSemesterId) || null,
     [semesters, activeSemesterId]
   );
 
-  const semesterFiles = useMemo(() => {
-    const list = files.filter((f) => f.semesterId === activeSemesterId);
-    if (!search.trim()) return list;
+  const activeFolder = useMemo(
+    () => folders.find((f) => f.id === activeFolderId) || null,
+    [folders, activeFolderId]
+  );
+
+  // Subpastas no nível atual
+  const currentSubfolders = useMemo(() => {
+    if (!activeSemesterId) return [];
+    return folders.filter((f) => {
+      if (f.semesterId !== activeSemesterId) return false;
+      if (activeFolderId) return f.parentId === activeFolderId;
+      return !f.parentId;
+    });
+  }, [folders, activeSemesterId, activeFolderId]);
+
+  // Arquivos no nível atual
+  const currentLevelFiles = useMemo(() => {
+    if (!activeSemesterId) return [];
+    return files.filter((f) => {
+      if (f.semesterId !== activeSemesterId) return false;
+      if (activeFolderId) return f.folderId === activeFolderId;
+      return !f.folderId;
+    });
+  }, [files, activeSemesterId, activeFolderId]);
+
+  // Arquivos filtrados pela busca
+  const filteredFiles = useMemo(() => {
+    if (!search.trim()) return currentLevelFiles;
     const q = search.toLowerCase();
-    return list.filter(
+    return currentLevelFiles.filter(
       (f) =>
         f.name.toLowerCase().includes(q) ||
         f.extension.toLowerCase().includes(q)
     );
-  }, [files, activeSemesterId, search]);
+  }, [currentLevelFiles, search]);
 
   const selectedFile = useMemo(
-    () => semesterFiles.find((f) => f.id === selectedFileId) || null,
-    [semesterFiles, selectedFileId]
+    () => files.find((f) => f.id === selectedFileId) || null,
+    [files, selectedFileId]
   );
 
-  // Sync URL query params cleanly without page reload
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams();
-    if (activeSemesterId) params.set("s", activeSemesterId);
-    if (selectedFileId) params.set("f", selectedFileId);
-    const qs = params.toString();
-    const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-    window.history.replaceState(null, "", nextUrl);
-  }, [activeSemesterId, selectedFileId]);
+  // Navegação entre arquivos
+  const fileListForNavigation = useMemo(() => {
+    if (!selectedFile) return currentLevelFiles;
+    // Se o arquivo selecionado pertence à mesma pasta, navega nela
+    const sameFolderFiles = files.filter(
+      (f) => f.semesterId === selectedFile.semesterId && f.folderId === selectedFile.folderId
+    );
+    return sameFolderFiles.length > 0 ? sameFolderFiles : files;
+  }, [selectedFile, currentLevelFiles, files]);
 
-  // Desktop convenience: if no file is selected on desktop and semester has files, select first
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const isDesktop = window.innerWidth >= 1024;
-    if (isDesktop && !selectedFileId && semesterFiles.length > 0) {
-      setSelectedFileId(semesterFiles[0].id);
-    }
-  }, [activeSemesterId, semesterFiles, selectedFileId]);
-
-  const handleSelectSemester = (id: string) => {
-    setActiveSemesterId(id);
-    setSearch("");
-    const firstFile = files.find((f) => f.semesterId === id);
-    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
-    setSelectedFileId(isDesktop && firstFile ? firstFile.id : null);
-    setMobileShowViewer(false);
-  };
-
-  const handleSelectFile = (fileId: string) => {
-    setSelectedFileId(fileId);
-    setMobileShowViewer(true);
-  };
-
-  const selectedIndex = semesterFiles.findIndex((f) => f.id === selectedFileId);
+  const selectedIndex = fileListForNavigation.findIndex((f) => f.id === selectedFileId);
 
   const handlePrevFile = () => {
     if (selectedIndex > 0) {
-      setSelectedFileId(semesterFiles[selectedIndex - 1].id);
+      setSelectedFileId(fileListForNavigation[selectedIndex - 1].id);
     }
   };
 
   const handleNextFile = () => {
-    if (selectedIndex >= 0 && selectedIndex < semesterFiles.length - 1) {
-      setSelectedFileId(semesterFiles[selectedIndex + 1].id);
+    if (selectedIndex >= 0 && selectedIndex < fileListForNavigation.length - 1) {
+      setSelectedFileId(fileListForNavigation[selectedIndex + 1].id);
     }
   };
 
+  // Upload
   const uploadSingleFile = useCallback(
     async (rawFile: File) => {
       if (!activeSemesterId) {
-        throw new Error("Crie ou selecione um semestre primeiro.");
+        throw new Error("Selecione um semestre para enviar arquivos.");
       }
 
       if (storageMode === "cloud") {
@@ -202,6 +237,7 @@ export default function ShowcaseApp({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               semesterId: activeSemesterId,
+              folderId: activeFolderId,
               name: rawFile.name,
               mimeType: rawFile.type,
               size: rawFile.size,
@@ -216,10 +252,10 @@ export default function ShowcaseApp({
           return data.file;
         } catch (clientErr) {
           console.warn("Client blob upload failed, falling back to server upload:", clientErr);
-          // Fallback automático para upload via servidor
           const formData = new FormData();
           formData.append("file", rawFile);
           formData.append("semesterId", activeSemesterId);
+          if (activeFolderId) formData.append("folderId", activeFolderId);
 
           const res = await fetch("/api/upload", {
             method: "POST",
@@ -237,6 +273,7 @@ export default function ShowcaseApp({
       const formData = new FormData();
       formData.append("file", rawFile);
       formData.append("semesterId", activeSemesterId);
+      if (activeFolderId) formData.append("folderId", activeFolderId);
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -249,7 +286,7 @@ export default function ShowcaseApp({
       }
       return data.file;
     },
-    [activeSemesterId, storageMode]
+    [activeSemesterId, activeFolderId, storageMode, blobAccess]
   );
 
   const handleUploadFiles = useCallback(
@@ -259,6 +296,11 @@ export default function ShowcaseApp({
 
       if (!isAdmin) {
         setPinOpen(true);
+        return;
+      }
+
+      if (!activeSemesterId) {
+        alert("Abra um semestre antes de enviar arquivos.");
         return;
       }
 
@@ -284,7 +326,7 @@ export default function ShowcaseApp({
         setSelectedFileId(lastUploaded.id);
       }
     },
-    [isAdmin, uploadSingleFile]
+    [isAdmin, activeSemesterId, uploadSingleFile]
   );
 
   const handleDeleteFile = async (e: React.MouseEvent, file: FileItem) => {
@@ -296,28 +338,37 @@ export default function ShowcaseApp({
       setFiles((prev) => prev.filter((f) => f.id !== file.id));
       if (selectedFileId === file.id) {
         setSelectedFileId(null);
-        setMobileShowViewer(false);
       }
     }
   };
 
-  const handleDeleteSemester = async (sem: Semester) => {
-    if (
-      !window.confirm(
-        `Excluir o semestre "${sem.name}" e todos os seus arquivos?`
-      )
-    ) {
-      return;
+  const handleDeleteFolder = async (e: React.MouseEvent, fld: Folder) => {
+    e.stopPropagation();
+    if (!window.confirm(`Excluir a pasta "${fld.name}" e todos os seus arquivos?`)) return;
+
+    const res = await fetch(`/api/folders/${fld.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setFolders((prev) => prev.filter((f) => f.id !== fld.id && f.parentId !== fld.id));
+      setFiles((prev) => prev.filter((file) => file.folderId !== fld.id));
+      if (activeFolderId === fld.id) {
+        setActiveFolderId(null);
+      }
     }
+  };
+
+  const handleDeleteSemester = async (e: React.MouseEvent, sem: Semester) => {
+    e.stopPropagation();
+    if (!window.confirm(`Excluir o semestre "${sem.name}" e todo o seu conteúdo?`)) return;
 
     const res = await fetch(`/api/semesters/${sem.id}`, { method: "DELETE" });
     if (res.ok) {
       const remaining = semesters.filter((s) => s.id !== sem.id);
       setSemesters(remaining);
+      setFolders((prev) => prev.filter((f) => f.semesterId !== sem.id));
       setFiles((prev) => prev.filter((f) => f.semesterId !== sem.id));
       if (activeSemesterId === sem.id) {
-        const nextId = remaining[0]?.id || "";
-        setActiveSemesterId(nextId);
+        setActiveSemesterId(null);
+        setActiveFolderId(null);
         setSelectedFileId(null);
       }
     }
@@ -332,7 +383,7 @@ export default function ShowcaseApp({
     }
   };
 
-  // Global drag and drop when in Edit Mode
+  // Drag and drop global
   const onDragEnter = (e: React.DragEvent) => {
     if (!isAdmin || !e.dataTransfer.types.includes("Files")) return;
     e.preventDefault();
@@ -375,11 +426,11 @@ export default function ShowcaseApp({
     >
       {/* Fullscreen Drag Overlay */}
       {isDragging && isAdmin && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/40 backdrop-blur-xs">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-white/70 bg-neutral-900/90 px-10 py-8 text-white shadow-2xl">
-            <UploadCloud className="h-9 w-9" />
-            <p className="text-sm font-medium">
-              Solte os arquivos para enviar para {activeSemester?.name}
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/50 backdrop-blur-xs">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-white/80 bg-neutral-900/90 px-10 py-8 text-white shadow-2xl">
+            <UploadCloud className="h-10 w-10 text-emerald-400" />
+            <p className="text-base font-semibold">
+              Solte os arquivos para enviar para {activeFolder?.name || activeSemester?.name || "a pasta atual"}
             </p>
             <p className="text-xs text-neutral-300">
               PDF, Imagens, DOCX, PPTX, Vídeos e mais
@@ -388,59 +439,105 @@ export default function ShowcaseApp({
         </div>
       )}
 
-      {/* Minimalist Top Bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
-        <div className="flex min-w-0 items-center gap-3">
-          {mobileShowViewer && selectedFile ? (
+      {/* Top Navbar */}
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 px-3 sm:px-4 dark:border-neutral-800">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          {/* Botão de abrir/fechar a barra lateral com animação */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((open) => !open)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+            title={sidebarOpen ? "Recolher painel lateral" : "Abrir painel lateral"}
+            aria-label="Alternar painel lateral"
+          >
+            {sidebarOpen ? (
+              <PanelLeftClose className="h-5 w-5" />
+            ) : (
+              <PanelLeftOpen className="h-5 w-5" />
+            )}
+          </button>
+
+          {/* Breadcrumbs de Navegação estilo Explorador */}
+          <nav className="flex min-w-0 items-center gap-1.5 text-xs sm:text-sm">
             <button
               type="button"
-              onClick={() => setMobileShowViewer(false)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-700 lg:hidden dark:border-neutral-800 dark:text-neutral-200"
+              onClick={() => {
+                setActiveSemesterId(null);
+                setActiveFolderId(null);
+                setSelectedFileId(null);
+              }}
+              className="flex items-center gap-1 font-semibold text-neutral-900 transition hover:text-neutral-600 dark:text-neutral-100 dark:hover:text-neutral-300"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Arquivos</span>
+              <Home className="h-4 w-4" />
+              <span className="hidden sm:inline">Início</span>
             </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 text-xs font-semibold text-white dark:bg-white dark:text-neutral-900">
-                PI
-              </div>
-              <span className="text-sm font-semibold tracking-tight">
-                Acervo PI
-              </span>
-            </div>
-          )}
 
-          {activeSemester && (
-            <div className="hidden items-center gap-2 border-l border-neutral-200 pl-3 text-xs sm:flex dark:border-neutral-800">
-              <span className="rounded-md bg-neutral-100 px-2 py-0.5 font-mono font-medium text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-                {activeSemester.name}
-              </span>
-              <span className="truncate text-neutral-500 dark:text-neutral-400">
-                {activeSemester.title}
-              </span>
-            </div>
-          )}
+            {activeSemester && (
+              <>
+                <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFolderId(null);
+                    setSelectedFileId(null);
+                  }}
+                  className={`truncate font-medium transition ${
+                    !activeFolder && !selectedFile
+                      ? "text-neutral-900 dark:text-neutral-100 font-semibold"
+                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
+                  }`}
+                >
+                  {activeSemester.name}
+                </button>
+              </>
+            )}
+
+            {activeFolder && (
+              <>
+                <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />
+                <button
+                  type="button"
+                  onClick={() => setSelectedFileId(null)}
+                  className={`truncate font-medium transition ${
+                    !selectedFile
+                      ? "text-neutral-900 dark:text-neutral-100 font-semibold"
+                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
+                  }`}
+                >
+                  {activeFolder.name}
+                </button>
+              </>
+            )}
+
+            {selectedFile && (
+              <>
+                <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="truncate font-semibold text-neutral-900 dark:text-neutral-100">
+                  {selectedFile.name}
+                </span>
+              </>
+            )}
+          </nav>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => {
-              setQrScope("semester");
+              setQrScope(selectedFile ? "file" : "semester");
               setQrOpen(true);
             }}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-900"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-900"
             title="Gerar QR Code para compartilhar"
           >
-            <QrCode className="h-3.5 w-3.5" />
+            <QrCode className="h-4 w-4" />
             <span className="hidden sm:inline">QR Code</span>
           </button>
 
           <button
             type="button"
             onClick={handleLockToggle}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${
+            className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${
               isAdmin
                 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                 : "border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
@@ -448,17 +545,17 @@ export default function ShowcaseApp({
             title={
               isAdmin
                 ? "Modo edição ativo (clique para bloquear)"
-                : "Desbloquear uploads e edição"
+                : "Desbloquear uploads e pastas"
             }
           >
             {isAdmin ? (
               <>
-                <Unlock className="h-3.5 w-3.5" />
+                <Unlock className="h-4 w-4" />
                 <span className="hidden sm:inline">Editando</span>
               </>
             ) : (
               <>
-                <Lock className="h-3.5 w-3.5" />
+                <Lock className="h-4 w-4" />
                 <span className="hidden sm:inline">Gerenciar</span>
               </>
             )}
@@ -468,133 +565,268 @@ export default function ShowcaseApp({
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex min-h-0 flex-1">
-        {/* Left Sidebar: Semesters + Files */}
+      {/* Main Body */}
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {/* Backdrop escuro no mobile quando o sidebar está aberto */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs transition-opacity lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar com animação suave de recolher/expandir */}
         <aside
-          className={`${
-            mobileShowViewer && selectedFile ? "hidden lg:flex" : "flex"
-          } w-full shrink-0 flex-col border-r border-neutral-200 bg-neutral-50/50 lg:w-80 dark:border-neutral-800 dark:bg-neutral-950`}
+          className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-neutral-200 bg-neutral-50/95 backdrop-blur-md transition-all duration-300 ease-in-out lg:static lg:bg-neutral-50/50 dark:border-neutral-800 dark:bg-neutral-950/95 lg:dark:bg-neutral-950 ${
+            sidebarOpen
+              ? "translate-x-0 w-72 sm:w-80 opacity-100"
+              : "-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-r-0"
+          }`}
         >
-          {/* Semesters Bar */}
-          <div className="border-b border-neutral-200 p-3 dark:border-neutral-800">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                Semestres
-              </span>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingSemester(null);
-                    setSemesterModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-200/70 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                >
-                  <Plus className="h-3 w-3" />
-                  Novo
-                </button>
-              )}
+          {/* Header do Sidebar */}
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
+            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              Navegação
+            </span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-200/60 dark:hover:bg-neutral-800"
+              title="Recolher painel lateral"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Links e Pastas Rápidas no Sidebar */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-4">
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSemesterId(null);
+                  setActiveFolderId(null);
+                  setSelectedFileId(null);
+                  if (window.innerWidth < 1024) setSidebarOpen(false);
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                  !activeSemesterId
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                    : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                }`}
+              >
+                <Home className="h-4 w-4" />
+                <span>Início (Todos os Semestres)</span>
+              </button>
             </div>
 
-            {semesters.length === 0 ? (
-              <p className="py-2 text-xs text-neutral-500">
-                Nenhum semestre criado.
-              </p>
-            ) : (
-              <div className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-x-visible lg:pb-0">
+            <div>
+              <div className="mb-2 flex items-center justify-between px-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                  Semestres ({semesters.length})
+                </span>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSemester(null);
+                      setSemesterModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-200/70 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Novo
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1">
                 {semesters.map((sem) => {
                   const active = sem.id === activeSemesterId;
-                  const count = files.filter((f) => f.semesterId === sem.id).length;
+                  const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
+                  const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
+
                   return (
                     <div
                       key={sem.id}
-                      onClick={() => handleSelectSemester(sem.id)}
-                      className={`group flex shrink-0 cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-xs transition ${
+                      onClick={() => {
+                        setActiveSemesterId(sem.id);
+                        setActiveFolderId(null);
+                        setSelectedFileId(null);
+                        if (window.innerWidth < 1024) setSidebarOpen(false);
+                      }}
+                      className={`group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs transition ${
                         active
-                          ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
+                          ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-semibold"
                           : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-900"
                       }`}
                     >
-                      <div className="min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-semibold">
-                            {sem.name}
-                          </span>
-                          <span
-                            className={`text-[10px] ${
-                              active
-                                ? "text-neutral-300 dark:text-neutral-600"
-                                : "text-neutral-400"
-                            }`}
-                          >
-                            ({count})
-                          </span>
-                        </div>
-                        {sem.title && sem.title !== sem.name && (
-                          <p
-                            className={`truncate text-[11px] ${
-                              active
-                                ? "text-neutral-300 dark:text-neutral-600"
-                                : "text-neutral-500 dark:text-neutral-400"
-                            }`}
-                          >
-                            {sem.title}
-                          </p>
-                        )}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FolderIcon className={`h-4 w-4 shrink-0 ${active ? "text-white dark:text-neutral-900" : "text-amber-500"}`} />
+                        <span className="truncate">{sem.name}</span>
                       </div>
-
-                      {isAdmin && (
-                        <div
-                          className="flex items-center gap-0.5 opacity-80 lg:opacity-0 lg:group-hover:opacity-100"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingSemester(sem);
-                              setSemesterModalOpen(true);
-                            }}
-                            className={`rounded p-1 ${
-                              active
-                                ? "hover:bg-white/15 dark:hover:bg-black/10"
-                                : "hover:bg-neutral-300/60 dark:hover:bg-neutral-800"
-                            }`}
-                            title="Editar semestre"
-                          >
-                            <Edit3 className="h-3 w-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSemester(sem)}
-                            className={`rounded p-1 ${
-                              active
-                                ? "hover:bg-white/15 dark:hover:bg-black/10"
-                                : "hover:bg-red-500/15 hover:text-red-600"
-                            }`}
-                            title="Excluir semestre"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      )}
+                      <span className={`text-[10px] ${active ? "opacity-80" : "text-neutral-400"}`}>
+                        {semFoldersCount}p · {semFilesCount}a
+                      </span>
                     </div>
                   );
                 })}
               </div>
-            )}
-          </div>
-
-          {/* Active Semester Description on Mobile */}
-          {activeSemester?.description && (
-            <div className="border-b border-neutral-200 px-3 py-2 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-              {activeSemester.description}
             </div>
-          )}
+          </div>
+        </aside>
 
-          {/* Drag & Drop Upload Box (Admin Only) */}
-          {isAdmin && activeSemester && (
-            <div className="border-b border-neutral-200 p-3 dark:border-neutral-800">
+        {/* Área Central: Visualizador OU Explorador de Arquivos */}
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-neutral-50/30 dark:bg-neutral-950">
+          {selectedFile ? (
+            /* Modo 1: Visualizador de Arquivo em Tela Cheia */
+            <div className="flex h-full flex-col">
+              {/* Botão de retorno superior */}
+              <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-2 text-xs dark:border-neutral-800 dark:bg-neutral-950">
+                <button
+                  type="button"
+                  onClick={() => setSelectedFileId(null)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-900"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Voltar para arquivos</span>
+                </button>
+                <span className="truncate text-neutral-500 text-[11px]">
+                  {activeSemester?.name} {activeFolder ? `› ${activeFolder.name}` : ""}
+                </span>
+              </div>
+
+              <div className="min-h-0 flex-1">
+                <FileViewer
+                  key={selectedFile.id}
+                  file={selectedFile}
+                  hasPrev={selectedIndex > 0}
+                  hasNext={selectedIndex >= 0 && selectedIndex < fileListForNavigation.length - 1}
+                  onPrev={handlePrevFile}
+                  onNext={handleNextFile}
+                  onOpenQr={() => {
+                    setQrScope("file");
+                    setQrOpen(true);
+                  }}
+                  onCloseViewer={() => setSelectedFileId(null)}
+                />
+              </div>
+            </div>
+          ) : (
+            /* Modo 2: Explorador de Pastas e Arquivos */
+            <div className="flex h-full flex-col overflow-y-auto p-4 sm:p-6 lg:p-8">
+              {/* Toolbar e Ações do Explorador */}
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  {/* Botão de Voltar ao nível anterior */}
+                  {(activeFolderId || activeSemesterId) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeFolderId) {
+                          setActiveFolderId(null);
+                        } else {
+                          setActiveSemesterId(null);
+                        }
+                      }}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-700 shadow-xs transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                      title="Subir de nível"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      <span>Voltar</span>
+                    </button>
+                  )}
+
+                  <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+                    {activeFolder
+                      ? activeFolder.name
+                      : activeSemester
+                      ? `${activeSemester.name} — ${activeSemester.title}`
+                      : "Gerenciador de Projetos"}
+                  </h1>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Busca */}
+                  {activeSemesterId && currentLevelFiles.length > 2 && (
+                    <div className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
+                      <Search className="h-4 w-4 text-neutral-400" />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Buscar..."
+                        className="w-24 sm:w-36 bg-transparent text-xs outline-none placeholder:text-neutral-400"
+                      />
+                    </div>
+                  )}
+
+                  {/* Alternar Grid / Lista */}
+                  <div className="hidden sm:flex items-center rounded-lg border border-neutral-200 bg-white p-0.5 dark:border-neutral-800 dark:bg-neutral-900">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("grid")}
+                      className={`rounded p-1.5 transition ${viewMode === "grid" ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100" : "text-neutral-400 hover:text-neutral-700"}`}
+                      title="Visualização em grade"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("list")}
+                      className={`rounded p-1.5 transition ${viewMode === "list" ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100" : "text-neutral-400 hover:text-neutral-700"}`}
+                      title="Visualização em lista"
+                    >
+                      <List className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Ações Administrativas */}
+                  {isAdmin && (
+                    <>
+                      {activeSemesterId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingFolder(null);
+                            setFolderModalOpen(true);
+                          }}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-700 shadow-xs transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                          title="Criar nova pasta neste semestre"
+                        >
+                          <FolderPlus className="h-4 w-4 text-amber-500" />
+                          <span>Nova Pasta</span>
+                        </button>
+                      )}
+
+                      {!activeSemesterId ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingSemester(null);
+                            setSemesterModalOpen(true);
+                          }}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 text-xs font-medium text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Novo Semestre</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 text-xs font-medium text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                        >
+                          <UploadCloud className="h-4 w-4" />
+                          <span>Enviar Arquivo</span>
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Input escondido de upload de arquivos */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -607,174 +839,291 @@ export default function ShowcaseApp({
                   }
                 }}
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-4 text-center transition hover:border-neutral-400 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900/60 dark:hover:border-neutral-600 dark:hover:bg-neutral-900"
-              >
-                {uploadingCount > 0 ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin text-neutral-500" />
-                    <span className="text-xs font-medium text-neutral-700 dark:text-neutral-200">
-                      Enviando {uploadingCount} arquivo(s)...
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud className="h-5 w-5 text-neutral-500" />
-                    <span className="text-xs font-medium text-neutral-700 dark:text-neutral-200">
-                      Arraste arquivos aqui ou clique
-                    </span>
-                    <span className="text-[11px] text-neutral-400">
-                      PDF, PNG, JPG, DOCX, PPTX...
-                    </span>
-                  </>
-                )}
-              </button>
-              {uploadError && (
-                <p className="mt-2 text-[11px] text-red-500">{uploadError}</p>
-              )}
-            </div>
-          )}
 
-          {/* File List Header + Search */}
-          <div className="flex items-center justify-between px-3 pt-3 pb-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-              Arquivos ({semesterFiles.length})
-            </span>
-          </div>
+              {/* NÍVEL 0: Exibição dos Semestres como Pastas Principais */}
+              {!activeSemesterId && (
+                <div>
+                  <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400">
+                    Selecione um semestre para acessar as pastas de projetos, relatórios e apresentações.
+                  </p>
 
-          {files.filter((f) => f.semesterId === activeSemesterId).length > 4 && (
-            <div className="px-3 pb-2">
-              <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
-                <Search className="h-3.5 w-3.5 text-neutral-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Filtrar arquivos..."
-                  className="w-full bg-transparent text-xs outline-none placeholder:text-neutral-400"
-                />
-              </div>
-            </div>
-          )}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                    {semesters.map((sem) => {
+                      const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
+                      const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
 
-          {/* Files List */}
-          <div className="flex-1 overflow-y-auto px-2 pb-4">
-            {semesterFiles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-                <FolderOpen className="h-7 w-7 text-neutral-300 dark:text-neutral-700" />
-                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                  {search
-                    ? "Nenhum arquivo encontrado."
-                    : "Nenhum arquivo neste semestre ainda."}
-                </p>
-                {!isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => setPinOpen(true)}
-                    className="mt-3 text-[11px] font-medium text-neutral-700 underline underline-offset-4 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
-                  >
-                    Desbloquear para enviar arquivos
-                  </button>
-                )}
-              </div>
-            ) : (
-              <ul className="space-y-1">
-                {semesterFiles.map((file) => {
-                  const selected = file.id === selectedFileId;
-                  return (
-                    <li key={file.id}>
-                      <div
-                        onClick={() => handleSelectFile(file.id)}
-                        className={`group flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 text-xs transition ${
-                          selected
-                            ? "bg-white font-medium text-neutral-900 shadow-xs ring-1 ring-neutral-200 dark:bg-neutral-900 dark:text-neutral-100 dark:ring-neutral-800"
-                            : "text-neutral-700 hover:bg-neutral-200/50 dark:text-neutral-300 dark:hover:bg-neutral-900/70"
-                        }`}
-                      >
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          <FileCategoryIcon category={file.category} />
-                          <div className="min-w-0">
-                            <p className="truncate">{file.name}</p>
-                            <p className="text-[10px] text-neutral-400">
-                              {file.extension.toUpperCase() || "ARQ"} ·{" "}
-                              {formatBytes(file.size)}
+                      return (
+                        <div
+                          key={sem.id}
+                          onClick={() => {
+                            setActiveSemesterId(sem.id);
+                            setActiveFolderId(null);
+                          }}
+                          className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400">
+                                <FolderIcon className="h-6 w-6" />
+                              </div>
+
+                              {isAdmin && (
+                                <div
+                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingSemester(sem);
+                                      setSemesterModalOpen(true);
+                                    }}
+                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                    title="Editar semestre"
+                                  >
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteSemester(e, sem)}
+                                    className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                    title="Excluir semestre"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            <h3 className="mt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                              {sem.name}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
+                              {sem.title || "Projeto Integrador"}
                             </p>
                           </div>
-                        </div>
 
+                          <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] text-neutral-400 dark:border-neutral-800/60">
+                            <span>{semFoldersCount} pasta(s)</span>
+                            <span>{semFilesCount} arquivo(s)</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* NÍVEL 1+: Dentro de um Semestre ou Subpasta */}
+              {activeSemesterId && (
+                <div className="space-y-6">
+                  {/* Seção de Subpastas */}
+                  {currentSubfolders.length > 0 && (
+                    <div>
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                        Pastas ({currentSubfolders.length})
+                      </h2>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                        {currentSubfolders.map((fld) => {
+                          const subFilesCount = files.filter((f) => f.folderId === fld.id).length;
+                          return (
+                            <div
+                              key={fld.id}
+                              onClick={() => setActiveFolderId(fld.id)}
+                              className="group flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400">
+                                  <FolderIcon className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                                    {fld.name}
+                                  </p>
+                                  <p className="text-[11px] text-neutral-400">
+                                    {subFilesCount} arquivo(s)
+                                  </p>
+                                </div>
+                              </div>
+
+                              {isAdmin && (
+                                <div
+                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingFolder(fld);
+                                      setFolderModalOpen(true);
+                                    }}
+                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                    title="Renomear pasta"
+                                  >
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteFolder(e, fld)}
+                                    className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                    title="Excluir pasta"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Seção de Arquivos */}
+                  <div>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                        Arquivos ({filteredFiles.length})
+                      </h2>
+                      {uploadingCount > 0 && (
+                        <span className="flex items-center gap-1.5 text-xs text-neutral-500">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Enviando {uploadingCount}...
+                        </span>
+                      )}
+                    </div>
+
+                    {filteredFiles.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 bg-white/50 p-10 text-center dark:border-neutral-800 dark:bg-neutral-900/30">
+                        <FolderOpen className="h-10 w-10 text-neutral-300 dark:text-neutral-700" />
+                        <p className="mt-3 text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                          {search ? "Nenhum arquivo corresponde à busca." : "Nenhum arquivo nesta pasta."}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-400 max-w-sm">
+                          Arraste arquivos PDF, imagens, DOCX ou PPTX diretamente para cá para começar.
+                        </p>
                         {isAdmin && (
                           <button
                             type="button"
-                            onClick={(e) => handleDeleteFile(e, file)}
-                            className="rounded p-1 text-neutral-400 opacity-75 transition hover:bg-red-500/10 hover:text-red-500 lg:opacity-0 lg:group-hover:opacity-100"
-                            title="Excluir arquivo"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-xs transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <UploadCloud className="h-4 w-4" />
+                            Enviar arquivo
                           </button>
                         )}
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </aside>
+                    ) : viewMode === "grid" ? (
+                      /* Grade de Arquivos */
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                        {filteredFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            onClick={() => setSelectedFileId(file.id)}
+                            className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-100 dark:bg-neutral-800">
+                                  <FileCategoryIcon category={file.category} />
+                                </div>
 
-        {/* Right Main Viewer Pane */}
-        <main
-          className={`${
-            mobileShowViewer && selectedFile ? "flex" : "hidden lg:flex"
-          } min-w-0 flex-1 flex-col`}
-        >
-          {selectedFile ? (
-            <FileViewer
-              key={selectedFile.id}
-              file={selectedFile}
-              hasPrev={selectedIndex > 0}
-              hasNext={
-                selectedIndex >= 0 && selectedIndex < semesterFiles.length - 1
-              }
-              onPrev={handlePrevFile}
-              onNext={handleNextFile}
-              onOpenQr={() => {
-                setQrScope("file");
-                setQrOpen(true);
-              }}
-            />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50 text-neutral-400 dark:border-neutral-800 dark:bg-neutral-900">
-                <Presentation className="h-6 w-6" />
-              </div>
-              <h2 className="mt-4 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                {activeSemester
-                  ? `${activeSemester.name} — ${activeSemester.title}`
-                  : "Selecione um semestre"}
-              </h2>
-              <p className="mt-1 max-w-sm text-xs text-neutral-500 dark:text-neutral-400">
-                {semesterFiles.length > 0
-                  ? "Escolha um arquivo na lista ao lado para visualizar em tela cheia."
-                  : "Envie seus PDFs, imagens, DOCX ou PPTX para visualizar e apresentar via navegador ou QR Code."}
-              </p>
-              {!isAdmin && semesterFiles.length === 0 && (
-                <button
-                  type="button"
-                  onClick={() => setPinOpen(true)}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-                >
-                  <UploadCloud className="h-3.5 w-3.5" />
-                  Desbloquear para enviar arquivos
-                </button>
+                                <div
+                                  className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <a
+                                    href={file.url}
+                                    download={file.name}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                    title="Baixar arquivo"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </a>
+                                  {isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleDeleteFile(e, file)}
+                                      className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                      title="Excluir arquivo"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <p className="mt-3 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                {file.name}
+                              </p>
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2.5 text-[11px] text-neutral-400 dark:border-neutral-800/60">
+                              <span className="font-mono font-semibold uppercase">{file.extension || "ARQ"}</span>
+                              <span>{formatBytes(file.size)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Lista de Arquivos */
+                      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
+                        {filteredFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            onClick={() => setSelectedFileId(file.id)}
+                            className="group flex cursor-pointer items-center justify-between p-3 text-xs transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <FileCategoryIcon category={file.category} />
+                              <div className="min-w-0">
+                                <p className="truncate font-medium text-neutral-900 dark:text-neutral-100">
+                                  {file.name}
+                                </p>
+                                <p className="text-[10px] text-neutral-400">
+                                  {file.extension.toUpperCase()} · {formatBytes(file.size)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div
+                              className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <a
+                                href={file.url}
+                                download={file.name}
+                                className="rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                title="Baixar"
+                              >
+                                <Download className="h-4 w-4" />
+                              </a>
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteFile(e, file)}
+                                  className="rounded p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}
         </main>
       </div>
 
-      {/* Modals */}
+      {/* Modais */}
       <QrCodeModal
         open={qrOpen}
         onClose={() => setQrOpen(false)}
@@ -798,10 +1147,28 @@ export default function ShowcaseApp({
           if (isNew) {
             setSemesters((prev) => [semester, ...prev]);
             setActiveSemesterId(semester.id);
+            setActiveFolderId(null);
             setSelectedFileId(null);
           } else {
             setSemesters((prev) =>
               prev.map((s) => (s.id === semester.id ? semester : s))
+            );
+          }
+        }}
+      />
+
+      <FolderModal
+        open={folderModalOpen}
+        semesterId={activeSemesterId || ""}
+        parentId={activeFolderId}
+        editingFolder={editingFolder}
+        onClose={() => setFolderModalOpen(false)}
+        onSaved={(folder, isNew) => {
+          if (isNew) {
+            setFolders((prev) => [...prev, folder]);
+          } else {
+            setFolders((prev) =>
+              prev.map((f) => (f.id === folder.id ? folder : f))
             );
           }
         }}

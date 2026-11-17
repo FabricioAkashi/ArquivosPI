@@ -102,8 +102,8 @@ export default function PdfViewer({ url, name }: PdfViewerProps) {
 
       const page = await doc.getPage(pageNumber);
       const unscaledViewport = page.getViewport({ scale: 1 });
-      const availableWidth = Math.max(container.clientWidth - 32, 280);
-      const fitScale = Math.min(availableWidth / unscaledViewport.width, 1.8);
+      const availableWidth = Math.max(container.clientWidth - 20, 260);
+      const fitScale = Math.min(availableWidth / unscaledViewport.width, 2.2);
       const scale = fitScale * zoom;
       const viewport = page.getViewport({ scale });
 
@@ -176,22 +176,22 @@ export default function PdfViewer({ url, name }: PdfViewerProps) {
               type="button"
               disabled={pageNumber <= 1}
               onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-35 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-xs transition hover:bg-neutral-100 disabled:opacity-35 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
               title="Página anterior (←)"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="min-w-[64px] text-center font-mono text-neutral-600 dark:text-neutral-300">
+            <span className="min-w-[68px] text-center font-mono text-xs font-medium text-neutral-700 dark:text-neutral-300">
               {numPages > 0 ? `${pageNumber} / ${numPages}` : "—"}
             </span>
             <button
               type="button"
               disabled={pageNumber >= numPages}
               onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-35 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-xs transition hover:bg-neutral-100 disabled:opacity-35 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
               title="Próxima página (→)"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </button>
 
             <div className="mx-1.5 h-4 w-px bg-neutral-200 dark:bg-neutral-800" />

@@ -158,22 +158,22 @@ export default function PptxViewer({ url, name }: PptxViewerProps) {
               type="button"
               disabled={slideIndex <= 0 || loading}
               onClick={goPrev}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-35 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-xs transition hover:bg-neutral-100 disabled:opacity-35 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
               title="Slide anterior (←)"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="min-w-[64px] text-center font-mono text-neutral-600 dark:text-neutral-300">
+            <span className="min-w-[68px] text-center font-mono text-xs font-medium text-neutral-700 dark:text-neutral-300">
               {slideCount > 0 ? `${slideIndex + 1} / ${slideCount}` : "—"}
             </span>
             <button
               type="button"
               disabled={slideIndex >= slideCount - 1 || loading}
               onClick={goNext}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-35 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-xs transition hover:bg-neutral-100 disabled:opacity-35 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
               title="Próximo slide (→)"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
         ) : (

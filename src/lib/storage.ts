@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { put, del, get } from "@vercel/blob";
-import { Database, FileItem, Semester } from "./types";
+import { Database, FileItem, Folder, Semester } from "./types";
 import { getExtension, getFileCategory, getMimeFromExtension, slugify } from "./file-utils";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -65,6 +65,7 @@ function getDefaultDb(): Database {
         createdAt: new Date().toISOString(),
       },
     ],
+    folders: [],
     files: [],
   };
 }
@@ -98,6 +99,7 @@ export async function readDb(): Promise<Database> {
       const parsed = JSON.parse(text) as Database;
       return {
         semesters: Array.isArray(parsed.semesters) ? parsed.semesters : [],
+        folders: Array.isArray(parsed.folders) ? parsed.folders : [],
         files: Array.isArray(parsed.files) ? parsed.files : [],
       };
     } catch {
@@ -111,6 +113,7 @@ export async function readDb(): Promise<Database> {
     const parsed = JSON.parse(raw) as Database;
     return {
       semesters: Array.isArray(parsed.semesters) ? parsed.semesters : [],
+      folders: Array.isArray(parsed.folders) ? parsed.folders : [],
       files: Array.isArray(parsed.files) ? parsed.files : [],
     };
   } catch {
@@ -207,7 +210,93 @@ export async function deleteSemester(id: string): Promise<boolean> {
     }
 
     db.semesters = db.semesters.filter((s) => s.id !== id);
+    db.folders = (db.folders || []).filter((f) => f.semesterId !== id);
     db.files = db.files.filter((f) => f.semesterId !== id);
+    await writeDb(db);
+    return true;
+  });
+}
+
+export async function createFolder(input: {
+  semesterId: string;
+  parentId?: string | null;
+  name: string;
+}): Promise<Folder> {
+  return withDbLock(async () => {
+    const db = await readDb();
+    if (!db.semesters.some((s) => s.id === input.semesterId)) {
+      throw new Error("Semestre não encontrado.");
+    }
+
+    const id = `fld-${crypto.randomUUID().slice(0, 8)}`;
+    const folder: Folder = {
+      id,
+      semesterId: input.semesterId,
+      parentId: input.parentId || null,
+      name: input.name.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!Array.isArray(db.folders)) {
+      db.folders = [];
+    }
+    db.folders.push(folder);
+    await writeDb(db);
+    return folder;
+  });
+}
+
+export async function updateFolder(
+  id: string,
+  updates: { name: string }
+): Promise<Folder | null> {
+  return withDbLock(async () => {
+    const db = await readDb();
+    if (!Array.isArray(db.folders)) return null;
+
+    const idx = db.folders.findIndex((f) => f.id === id);
+    if (idx === -1) return null;
+
+    const current = db.folders[idx];
+    const updated: Folder = {
+      ...current,
+      name: updates.name.trim() || current.name,
+    };
+
+    db.folders[idx] = updated;
+    await writeDb(db);
+    return updated;
+  });
+}
+
+export async function deleteFolder(id: string): Promise<boolean> {
+  return withDbLock(async () => {
+    const db = await readDb();
+    const folders = db.folders || [];
+    const target = folders.find((f) => f.id === id);
+    if (!target) return false;
+
+    // Achar todas as subpastas recursivamente
+    const toDeleteFolderIds = new Set<string>([id]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const f of folders) {
+        if (f.parentId && toDeleteFolderIds.has(f.parentId) && !toDeleteFolderIds.has(f.id)) {
+          toDeleteFolderIds.add(f.id);
+          added = true;
+        }
+      }
+    }
+
+    // Achar e deletar arquivos contidos nessas pastas
+    const filesToDelete = db.files.filter((f) => f.folderId && toDeleteFolderIds.has(f.folderId));
+    for (const file of filesToDelete) {
+      await removeStoredFile(file.storageKey).catch(() => {});
+    }
+
+    db.folders = folders.filter((f) => !toDeleteFolderIds.has(f.id));
+    db.files = db.files.filter((f) => !f.folderId || !toDeleteFolderIds.has(f.folderId));
     await writeDb(db);
     return true;
   });
@@ -215,6 +304,7 @@ export async function deleteSemester(id: string): Promise<boolean> {
 
 export async function saveLocalFileAndRecord(params: {
   semesterId: string;
+  folderId?: string | null;
   name: string;
   mimeType: string;
   buffer: Buffer;
@@ -250,6 +340,7 @@ export async function saveLocalFileAndRecord(params: {
     const item: FileItem = {
       id,
       semesterId: params.semesterId,
+      folderId: params.folderId || null,
       name: params.name,
       mimeType,
       size: params.buffer.length,
@@ -268,6 +359,7 @@ export async function saveLocalFileAndRecord(params: {
 
 export async function registerCloudFileRecord(params: {
   semesterId: string;
+  folderId?: string | null;
   name: string;
   mimeType: string;
   size: number;
@@ -287,6 +379,7 @@ export async function registerCloudFileRecord(params: {
     const item: FileItem = {
       id,
       semesterId: params.semesterId,
+      folderId: params.folderId || null,
       name: params.name,
       mimeType,
       size: params.size,

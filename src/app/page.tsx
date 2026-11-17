@@ -27,6 +27,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <ShowcaseApp
       initialSemesters={db.semesters}
+      initialFolders={db.folders || []}
       initialFiles={db.files}
       initialSemesterId={initialSemesterId}
       initialFileId={params.f}

@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     if (contentType.includes("application/json")) {
       const body = (await req.json()) as {
         semesterId?: string;
+        folderId?: string | null;
         name?: string;
         mimeType?: string;
         size?: number;
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
 
       const file = await registerCloudFileRecord({
         semesterId: body.semesterId,
+        folderId: body.folderId || null,
         name: body.name,
         mimeType: body.mimeType || "",
         size: Number(body.size) || 0,
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file");
     const semesterId = formData.get("semesterId");
+    const folderId = formData.get("folderId") as string | null;
 
     if (!(file instanceof File) || typeof semesterId !== "string" || !semesterId) {
       return NextResponse.json(
@@ -59,6 +62,7 @@ export async function POST(req: NextRequest) {
 
     const saved = await saveLocalFileAndRecord({
       semesterId,
+      folderId: folderId || null,
       name: file.name,
       mimeType: file.type,
       buffer,

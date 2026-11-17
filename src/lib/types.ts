@@ -16,9 +16,18 @@ export interface Semester {
   createdAt: string;
 }
 
+export interface Folder {
+  id: string;
+  semesterId: string;
+  parentId?: string | null;
+  name: string;
+  createdAt: string;
+}
+
 export interface FileItem {
   id: string;
   semesterId: string;
+  folderId?: string | null;
   name: string;
   mimeType: string;
   size: number;
@@ -31,5 +40,6 @@ export interface FileItem {
 
 export interface Database {
   semesters: Semester[];
+  folders?: Folder[];
   files: FileItem[];
 }

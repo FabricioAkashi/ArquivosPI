@@ -1,8 +1,11 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import {
+  createFolder,
   createSemester,
+  deleteFolder,
   deleteSemester,
   readDb,
+  updateFolder,
   updateSemester,
   writeDb,
 } from "@/lib/storage";
@@ -20,6 +23,7 @@ describe("storage", () => {
           createdAt: new Date().toISOString(),
         },
       ],
+      folders: [],
       files: [],
     });
   });
@@ -85,6 +89,74 @@ describe("storage", () => {
     it("deve retornar false ao excluir semestre inexistente", async () => {
       const deleted = await deleteSemester("fantasma");
       expect(deleted).toBe(false);
+    });
+  });
+
+  describe("Folders CRUD", () => {
+    it("deve criar uma pasta dentro de um semestre", async () => {
+      const folder = await createFolder({
+        semesterId: "2026-2",
+        name: "Documentos de Requisitos",
+      });
+
+      expect(folder.id).toMatch(/^fld-/);
+      expect(folder.semesterId).toBe("2026-2");
+      expect(folder.name).toBe("Documentos de Requisitos");
+      expect(folder.parentId).toBeNull();
+
+      const db = await readDb();
+      expect(db.folders?.some((f) => f.id === folder.id)).toBe(true);
+    });
+
+    it("deve criar subpastas aninhadas", async () => {
+      const parent = await createFolder({
+        semesterId: "2026-2",
+        name: "Sprint 1",
+      });
+
+      const child = await createFolder({
+        semesterId: "2026-2",
+        parentId: parent.id,
+        name: "Diagramas",
+      });
+
+      expect(child.parentId).toBe(parent.id);
+      const db = await readDb();
+      expect(db.folders?.length).toBe(2);
+    });
+
+    it("deve atualizar o nome de uma pasta existente", async () => {
+      const folder = await createFolder({
+        semesterId: "2026-2",
+        name: "Nome Antigo",
+      });
+
+      const updated = await updateFolder(folder.id, { name: "Nome Atualizado" });
+      expect(updated?.name).toBe("Nome Atualizado");
+
+      const db = await readDb();
+      const found = db.folders?.find((f) => f.id === folder.id);
+      expect(found?.name).toBe("Nome Atualizado");
+    });
+
+    it("deve deletar uma pasta e cascatear para subpastas", async () => {
+      const parent = await createFolder({
+        semesterId: "2026-2",
+        name: "Pasta Pai",
+      });
+
+      const child = await createFolder({
+        semesterId: "2026-2",
+        parentId: parent.id,
+        name: "Pasta Filha",
+      });
+
+      const deleted = await deleteFolder(parent.id);
+      expect(deleted).toBe(true);
+
+      const db = await readDb();
+      expect(db.folders?.some((f) => f.id === parent.id)).toBe(false);
+      expect(db.folders?.some((f) => f.id === child.id)).toBe(false);
     });
   });
 });

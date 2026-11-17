@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  Copy,
   Download,
   Edit3,
   FileCode2,
@@ -109,9 +110,19 @@ interface SidebarFolderNodeProps {
   activeFolderId: string | null;
   selectedFileId: string | null;
   expandedFolders: Record<string, boolean>;
+  isAdmin: boolean;
   onToggleFolder: (folderId: string) => void;
   onSelectFolder: (folder: Folder) => void;
   onSelectFile: (file: FileItem) => void;
+  onOpenQrFolder: (folder: Folder) => void;
+  onNewSubfolder: (folder: Folder) => void;
+  onUploadToFolder: (folder: Folder) => void;
+  onEditFolder: (folder: Folder) => void;
+  onDeleteFolder: (folder: Folder) => void;
+  onOpenQrFile: (file: FileItem) => void;
+  onDownloadFile: (file: FileItem) => void;
+  onCopyFileLink: (file: FileItem) => void;
+  onDeleteFile: (file: FileItem) => void;
   depth?: number;
 }
 
@@ -123,9 +134,19 @@ function SidebarFolderNode({
   activeFolderId,
   selectedFileId,
   expandedFolders,
+  isAdmin,
   onToggleFolder,
   onSelectFolder,
   onSelectFile,
+  onOpenQrFolder,
+  onNewSubfolder,
+  onUploadToFolder,
+  onEditFolder,
+  onDeleteFolder,
+  onOpenQrFile,
+  onDownloadFile,
+  onCopyFileLink,
+  onDeleteFile,
   depth = 0,
 }: SidebarFolderNodeProps) {
   // Uma pasta é considerada aberta se explicitamente expandida ou se for a pasta ativa no momento
@@ -138,69 +159,127 @@ function SidebarFolderNode({
   const folderFiles = allFiles.filter((f) => f.folderId === folder.id);
   const hasItems = childFolders.length > 0 || folderFiles.length > 0;
 
+  const folderContextMenuItems: ContextMenuItem[] = [
+    {
+      id: "open",
+      label: "Abrir pasta",
+      icon: <FolderOpen className="h-4 w-4 text-[#c96726]" />,
+      onSelect: () => onSelectFolder(folder),
+    },
+    {
+      id: "toggle",
+      label: isExpanded ? "Recolher pasta" : "Expandir pasta",
+      icon: isExpanded ? (
+        <ChevronDown className="h-4 w-4 text-[#736d67]" />
+      ) : (
+        <ChevronRight className="h-4 w-4 text-[#736d67]" />
+      ),
+      onSelect: () => onToggleFolder(folder.id),
+    },
+    {
+      id: "qr",
+      label: "Gerar QR Code da pasta",
+      icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
+      onSelect: () => onOpenQrFolder(folder),
+    },
+    ...(isAdmin
+      ? [
+          {
+            id: "new-subfolder",
+            label: "Nova subpasta",
+            icon: <FolderPlus className="h-4 w-4 text-[#736d67]" />,
+            separatorBefore: true,
+            onSelect: () => onNewSubfolder(folder),
+          },
+          {
+            id: "upload",
+            label: "Enviar arquivo para esta pasta",
+            icon: <UploadCloud className="h-4 w-4 text-[#736d67]" />,
+            onSelect: () => onUploadToFolder(folder),
+          },
+          {
+            id: "rename",
+            label: "Editar pasta",
+            icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
+            separatorBefore: true,
+            onSelect: () => onEditFolder(folder),
+          },
+          {
+            id: "delete",
+            label: "Excluir pasta",
+            icon: <Trash2 className="h-4 w-4" />,
+            destructive: true,
+            onSelect: () => onDeleteFolder(folder),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="select-none">
-      {/* Linha da Pasta no Sidebar */}
-      <div
-        className={`group flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 font-mono text-xs transition ${
-          isActive
-            ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
-            : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
-        }`}
-        onClick={() => onSelectFolder(folder)}
-      >
-        <div className="flex min-w-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFolder(folder.id);
-            }}
-            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded transition ${
-              isActive
-                ? "text-[#fafbf7]/80 hover:text-white dark:text-[#1a1614]/80 dark:hover:text-[#1a1614]"
-                : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
-            }`}
-            title={isExpanded ? "Recolher pasta" : "Expandir pasta"}
-          >
-            {isExpanded ? (
-              <ChevronDown className="h-3 w-3 shrink-0" />
-            ) : (
-              <ChevronRight className="h-3 w-3 shrink-0" />
-            )}
-          </button>
-
-          {isExpanded ? (
-            <FolderOpen
-              className={`h-3.5 w-3.5 shrink-0 ${
-                isActive
-                  ? "text-[#c96726] dark:text-[#d77435]"
-                  : "text-[#c96726] dark:text-[#d77435]"
-              }`}
-            />
-          ) : (
-            <FolderIcon
-              className={`h-3.5 w-3.5 shrink-0 ${
-                isActive
-                  ? "text-[#fafbf7] dark:text-[#1a1614]"
-                  : "text-[#c96726] dark:text-[#d77435]"
-              }`}
-            />
-          )}
-
-          <span className="truncate">{folder.name}</span>
-        </div>
-
-        <span
-          className={`ml-1 shrink-0 font-mono text-[10px] ${
+      {/* Linha da Pasta no Sidebar com Menu de Clique Direito */}
+      <ContextMenu items={folderContextMenuItems}>
+        <div
+          className={`group flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 font-mono text-xs transition ${
             isActive
-              ? "text-[#fafbf7]/70 dark:text-[#1a1614]/70"
-              : "text-[#736d67]/60 dark:text-[#9c968f]/60"
+              ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
+              : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
           }`}
+          onClick={() => onSelectFolder(folder)}
         >
-          {folderFiles.length}
-        </span>
-      </div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFolder(folder.id);
+              }}
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded transition ${
+                isActive
+                  ? "text-[#fafbf7]/80 hover:text-white dark:text-[#1a1614]/80 dark:hover:text-[#1a1614]"
+                  : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+              }`}
+              title={isExpanded ? "Recolher pasta" : "Expandir pasta"}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-3 w-3 shrink-0" />
+              ) : (
+                <ChevronRight className="h-3 w-3 shrink-0" />
+              )}
+            </button>
+
+            {isExpanded ? (
+              <FolderOpen
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  isActive
+                    ? "text-[#c96726] dark:text-[#d77435]"
+                    : "text-[#c96726] dark:text-[#d77435]"
+                }`}
+              />
+            ) : (
+              <FolderIcon
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  isActive
+                    ? "text-[#fafbf7] dark:text-[#1a1614]"
+                    : "text-[#c96726] dark:text-[#d77435]"
+                }`}
+              />
+            )}
+
+            <span className="truncate">{folder.name}</span>
+          </div>
+
+          <span
+            className={`ml-1 shrink-0 font-mono text-[10px] ${
+              isActive
+                ? "text-[#fafbf7]/70 dark:text-[#1a1614]/70"
+                : "text-[#736d67]/60 dark:text-[#9c968f]/60"
+            }`}
+          >
+            {folderFiles.length}
+          </span>
+        </div>
+      </ContextMenu>
 
       {/* Conteúdo da Pasta Aberta (Subpastas + Arquivos) - Estilo VS Code Explorer */}
       {isExpanded && (
@@ -216,47 +295,97 @@ function SidebarFolderNode({
               activeFolderId={activeFolderId}
               selectedFileId={selectedFileId}
               expandedFolders={expandedFolders}
+              isAdmin={isAdmin}
               onToggleFolder={onToggleFolder}
               onSelectFolder={onSelectFolder}
               onSelectFile={onSelectFile}
+              onOpenQrFolder={onOpenQrFolder}
+              onNewSubfolder={onNewSubfolder}
+              onUploadToFolder={onUploadToFolder}
+              onEditFolder={onEditFolder}
+              onDeleteFolder={onDeleteFolder}
+              onOpenQrFile={onOpenQrFile}
+              onDownloadFile={onDownloadFile}
+              onCopyFileLink={onCopyFileLink}
+              onDeleteFile={onDeleteFile}
               depth={depth + 1}
             />
           ))}
 
-          {/* Arquivos dentro desta pasta aberta */}
+          {/* Arquivos dentro desta pasta aberta com Menu de Clique Direito */}
           {folderFiles.map((file) => {
             const isFileActive = selectedFileId === file.id;
+            const fileContextMenuItems: ContextMenuItem[] = [
+              {
+                id: "open",
+                label: "Visualizar documento",
+                icon: <FileText className="h-4 w-4 text-[#c96726]" />,
+                onSelect: () => onSelectFile(file),
+              },
+              {
+                id: "download",
+                label: "Baixar arquivo",
+                icon: <Download className="h-4 w-4 text-[#736d67]" />,
+                onSelect: () => onDownloadFile(file),
+              },
+              {
+                id: "qr",
+                label: "Gerar QR Code do arquivo",
+                icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
+                onSelect: () => onOpenQrFile(file),
+              },
+              {
+                id: "copy-link",
+                label: "Copiar link do arquivo",
+                icon: <Copy className="h-4 w-4 text-[#736d67]" />,
+                onSelect: () => onCopyFileLink(file),
+              },
+              ...(isAdmin
+                ? [
+                    {
+                      id: "delete",
+                      label: "Excluir arquivo",
+                      icon: <Trash2 className="h-4 w-4" />,
+                      destructive: true,
+                      separatorBefore: true,
+                      onSelect: () => onDeleteFile(file),
+                    },
+                  ]
+                : []),
+            ];
+
             return (
-              <div
-                key={file.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectFile(file);
-                }}
-                className={`group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 font-mono text-xs transition ${
-                  isFileActive
-                    ? "bg-[#c96726]/15 text-[#1a1614] dark:text-[#fafbf7] font-semibold border-l-2 border-[#c96726]"
-                    : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
-                }`}
-                title={`${file.name} (${formatBytes(file.size)})`}
-              >
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <FileCategoryIcon category={file.category} className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{file.name}</span>
+              <ContextMenu key={file.id} items={fileContextMenuItems}>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectFile(file);
+                  }}
+                  className={`group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 font-mono text-xs transition ${
+                    isFileActive
+                      ? "bg-[#c96726]/15 text-[#1a1614] dark:text-[#fafbf7] font-semibold border-l-2 border-[#c96726]"
+                      : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
+                  }`}
+                  title={`${file.name} (${formatBytes(file.size)})`}
+                >
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <FileCategoryIcon category={file.category} className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{file.name}</span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1 pl-1.5">
+                    {isFileActive ? (
+                      <span
+                        className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
+                        title="Arquivo aberto no visualizador"
+                      />
+                    ) : (
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-[#736d67]/50 dark:text-[#9c968f]/50">
+                        {file.extension}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1 pl-1.5">
-                  {isFileActive ? (
-                    <span
-                      className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
-                      title="Arquivo aberto no visualizador"
-                    />
-                  ) : (
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-[#736d67]/50 dark:text-[#9c968f]/50">
-                      {file.extension}
-                    </span>
-                  )}
-                </div>
-              </div>
+              </ContextMenu>
             );
           })}
 
@@ -493,6 +622,63 @@ export default function ShowcaseApp({
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
+  };
+
+  // Estados e manipuladores para criação e ações contextuais via clique direito (sidebar)
+  const [targetFolderSemesterId, setTargetFolderSemesterId] = useState<string | null>(null);
+  const [targetFolderParentId, setTargetFolderParentId] = useState<string | null | undefined>(undefined);
+
+  const handleDownloadFile = (file: FileItem) => {
+    const link = document.createElement("a");
+    link.href = file.url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyFileLink = (file: FileItem) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/?s=${file.semesterId}${file.folderId ? `&d=${file.folderId}` : ""}&f=${file.id}`;
+    if (navigator?.clipboard?.writeText) {
+      void navigator.clipboard.writeText(url);
+      showAlert("Link copiado!", `O link direto para "${file.name}" foi copiado para a área de transferência.`, "info");
+    }
+  };
+
+  const handleOpenQrFolder = (folder: Folder) => {
+    setActiveSemesterId(folder.semesterId);
+    setActiveFolderId(folder.id);
+    setQrScope("folder");
+    setQrOpen(true);
+  };
+
+  const handleOpenQrFile = (file: FileItem) => {
+    setSelectedFileId(file.id);
+    setActiveSemesterId(file.semesterId);
+    if (file.folderId) setActiveFolderId(file.folderId);
+    setQrScope("file");
+    setQrOpen(true);
+  };
+
+  const handleNewSubfolder = (folder: Folder) => {
+    setTargetFolderSemesterId(folder.semesterId);
+    setTargetFolderParentId(folder.id);
+    setEditingFolder(null);
+    setFolderModalOpen(true);
+  };
+
+  const handleUploadToFolder = (folder: Folder) => {
+    setActiveSemesterId(folder.semesterId);
+    setActiveFolderId(folder.id);
+    fileInputRef.current?.click();
+  };
+
+  const handleEditFolder = (folder: Folder) => {
+    setTargetFolderSemesterId(folder.semesterId);
+    setTargetFolderParentId(folder.parentId);
+    setEditingFolder(folder);
+    setFolderModalOpen(true);
   };
 
   const activeSemester = useMemo(
@@ -1096,65 +1282,145 @@ export default function ShowcaseApp({
                     const totalSemFiles = files.filter((f) => f.semesterId === sem.id).length;
                     const totalSemFolders = folders.filter((f) => f.semesterId === sem.id).length;
 
+                    const sidebarSemesterContextMenuItems: ContextMenuItem[] = [
+                      {
+                        id: "open",
+                        label: "Abrir ciclo",
+                        icon: <FolderOpen className="h-4 w-4 text-[#c96726]" />,
+                        onSelect: () => handleSidebarSelectSemester(sem.id),
+                      },
+                      {
+                        id: "toggle",
+                        label: isSemOpen ? "Recolher ciclo" : "Expandir ciclo",
+                        icon: isSemOpen ? (
+                          <ChevronDown className="h-4 w-4 text-[#736d67]" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-[#736d67]" />
+                        ),
+                        onSelect: () => toggleSemesterExpansion(sem.id),
+                      },
+                      {
+                        id: "qr",
+                        label: "Gerar QR Code do ciclo",
+                        icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
+                        onSelect: () => {
+                          setActiveSemesterId(sem.id);
+                          setActiveFolderId(null);
+                          setQrScope("semester");
+                          setQrOpen(true);
+                        },
+                      },
+                      ...(isAdmin
+                        ? [
+                            {
+                              id: "new-folder",
+                              label: "Nova pasta neste ciclo",
+                              icon: <FolderPlus className="h-4 w-4 text-[#736d67]" />,
+                              separatorBefore: true,
+                              onSelect: () => {
+                                setTargetFolderSemesterId(sem.id);
+                                setTargetFolderParentId(null);
+                                setEditingFolder(null);
+                                setFolderModalOpen(true);
+                              },
+                            },
+                            {
+                              id: "upload",
+                              label: "Enviar arquivo para este ciclo",
+                              icon: <UploadCloud className="h-4 w-4 text-[#736d67]" />,
+                              onSelect: () => {
+                                setActiveSemesterId(sem.id);
+                                setActiveFolderId(null);
+                                fileInputRef.current?.click();
+                              },
+                            },
+                            {
+                              id: "edit",
+                              label: "Editar ciclo",
+                              icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
+                              separatorBefore: true,
+                              onSelect: () => {
+                                setEditingSemester(sem);
+                                setSemesterModalOpen(true);
+                              },
+                            },
+                            {
+                              id: "delete",
+                              label: "Excluir ciclo",
+                              icon: <Trash2 className="h-4 w-4" />,
+                              destructive: true,
+                              onSelect: () => {
+                                handleDeleteSemester(
+                                  { stopPropagation: () => {} } as React.MouseEvent,
+                                  sem
+                                );
+                              },
+                            },
+                          ]
+                        : []),
+                    ];
+
                     return (
                       <div key={sem.id} className="select-none">
-                        {/* Linha do Semestre */}
-                        <div
-                          onClick={() => handleSidebarSelectSemester(sem.id)}
-                          className={`group flex cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 font-mono text-xs transition ${
-                            isSemActive && !activeFolderId && !selectedFileId
-                              ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
-                              : isSemActive
-                              ? "bg-[#1a1614]/5 text-[#1a1614] dark:bg-white/5 dark:text-[#fafbf7] font-medium"
-                              : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
-                          }`}
-                        >
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleSemesterExpansion(sem.id);
-                              }}
-                              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
-                              title={isSemOpen ? "Recolher ciclo" : "Expandir ciclo"}
-                            >
+                        {/* Linha do Semestre com Menu de Clique Direito */}
+                        <ContextMenu items={sidebarSemesterContextMenuItems}>
+                          <div
+                            onClick={() => handleSidebarSelectSemester(sem.id)}
+                            className={`group flex cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 font-mono text-xs transition ${
+                              isSemActive && !activeFolderId && !selectedFileId
+                                ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614] font-medium shadow-2xs"
+                                : isSemActive
+                                ? "bg-[#1a1614]/5 text-[#1a1614] dark:bg-white/5 dark:text-[#fafbf7] font-medium"
+                                : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
+                            }`}
+                          >
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSemesterExpansion(sem.id);
+                                }}
+                                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+                                title={isSemOpen ? "Recolher ciclo" : "Expandir ciclo"}
+                              >
+                                {isSemOpen ? (
+                                  <ChevronDown className="h-3 w-3 shrink-0" />
+                                ) : (
+                                  <ChevronRight className="h-3 w-3 shrink-0" />
+                                )}
+                              </button>
+
+                              <span
+                                className={`text-[10px] ${
+                                  isSemActive
+                                    ? "text-[#c96726] dark:text-[#d77435]"
+                                    : "text-[#736d67]/60 dark:text-[#9c968f]/60"
+                                }`}
+                              >
+                                {String(idx + 1).padStart(2, "0")}
+                              </span>
+
                               {isSemOpen ? (
-                                <ChevronDown className="h-3 w-3 shrink-0" />
+                                <FolderOpen className="h-3.5 w-3.5 shrink-0 text-[#c96726] dark:text-[#d77435]" />
                               ) : (
-                                <ChevronRight className="h-3 w-3 shrink-0" />
+                                <FolderIcon className="h-3.5 w-3.5 shrink-0 text-[#c96726] dark:text-[#d77435]" />
                               )}
-                            </button>
+
+                              <span className="truncate">{sem.name}</span>
+                            </div>
 
                             <span
                               className={`text-[10px] ${
                                 isSemActive
-                                  ? "text-[#c96726] dark:text-[#d77435]"
+                                  ? "opacity-75"
                                   : "text-[#736d67]/60 dark:text-[#9c968f]/60"
                               }`}
                             >
-                              {String(idx + 1).padStart(2, "0")}
+                              {totalSemFolders}p · {totalSemFiles}a
                             </span>
-
-                            {isSemOpen ? (
-                              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-[#c96726] dark:text-[#d77435]" />
-                            ) : (
-                              <FolderIcon className="h-3.5 w-3.5 shrink-0 text-[#c96726] dark:text-[#d77435]" />
-                            )}
-
-                            <span className="truncate">{sem.name}</span>
                           </div>
-
-                          <span
-                            className={`text-[10px] ${
-                              isSemActive
-                                ? "opacity-75"
-                                : "text-[#736d67]/60 dark:text-[#9c968f]/60"
-                            }`}
-                          >
-                            {totalSemFolders}p · {totalSemFiles}a
-                          </span>
-                        </div>
+                        </ContextMenu>
 
                         {/* Conteúdo do Semestre Expandido */}
                         {isSemOpen && (
@@ -1170,50 +1436,114 @@ export default function ShowcaseApp({
                                 activeFolderId={activeFolderId}
                                 selectedFileId={selectedFileId}
                                 expandedFolders={expandedFolders}
+                                isAdmin={isAdmin}
                                 onToggleFolder={toggleFolderExpansion}
                                 onSelectFolder={handleSidebarSelectFolder}
                                 onSelectFile={handleSidebarSelectFile}
+                                onOpenQrFolder={handleOpenQrFolder}
+                                onNewSubfolder={handleNewSubfolder}
+                                onUploadToFolder={handleUploadToFolder}
+                                onEditFolder={handleEditFolder}
+                                onDeleteFolder={(folderToDelete) => {
+                                  handleDeleteFolder(
+                                    { stopPropagation: () => {} } as React.MouseEvent,
+                                    folderToDelete
+                                  );
+                                }}
+                                onOpenQrFile={handleOpenQrFile}
+                                onDownloadFile={handleDownloadFile}
+                                onCopyFileLink={handleCopyFileLink}
+                                onDeleteFile={(fileToDelete) => {
+                                  handleDeleteFile(
+                                    { stopPropagation: () => {} } as React.MouseEvent,
+                                    fileToDelete
+                                  );
+                                }}
                                 depth={0}
                               />
                             ))}
 
-                            {/* Arquivos na raiz do semestre */}
+                            {/* Arquivos na raiz do semestre com Menu de Clique Direito */}
                             {semRootFiles.map((file) => {
                               const isFileActive = selectedFileId === file.id;
+                              const rootFileContextMenuItems: ContextMenuItem[] = [
+                                {
+                                  id: "open",
+                                  label: "Visualizar documento",
+                                  icon: <FileText className="h-4 w-4 text-[#c96726]" />,
+                                  onSelect: () => handleSidebarSelectFile(file),
+                                },
+                                {
+                                  id: "download",
+                                  label: "Baixar arquivo",
+                                  icon: <Download className="h-4 w-4 text-[#736d67]" />,
+                                  onSelect: () => handleDownloadFile(file),
+                                },
+                                {
+                                  id: "qr",
+                                  label: "Gerar QR Code do arquivo",
+                                  icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
+                                  onSelect: () => handleOpenQrFile(file),
+                                },
+                                {
+                                  id: "copy-link",
+                                  label: "Copiar link do arquivo",
+                                  icon: <Copy className="h-4 w-4 text-[#736d67]" />,
+                                  onSelect: () => handleCopyFileLink(file),
+                                },
+                                ...(isAdmin
+                                  ? [
+                                      {
+                                        id: "delete",
+                                        label: "Excluir arquivo",
+                                        icon: <Trash2 className="h-4 w-4" />,
+                                        destructive: true,
+                                        separatorBefore: true,
+                                        onSelect: () =>
+                                          handleDeleteFile(
+                                            { stopPropagation: () => {} } as React.MouseEvent,
+                                            file
+                                          ),
+                                      },
+                                    ]
+                                  : []),
+                              ];
+
                               return (
-                                <div
-                                  key={file.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSidebarSelectFile(file);
-                                  }}
-                                  className={`group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 font-mono text-xs transition ${
-                                    isFileActive
-                                      ? "bg-[#c96726]/15 text-[#1a1614] dark:text-[#fafbf7] font-semibold border-l-2 border-[#c96726]"
-                                      : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
-                                  }`}
-                                  title={`${file.name} (${formatBytes(file.size)})`}
-                                >
-                                  <div className="flex min-w-0 items-center gap-1.5">
-                                    <FileCategoryIcon
-                                      category={file.category}
-                                      className="h-3.5 w-3.5 shrink-0"
-                                    />
-                                    <span className="truncate">{file.name}</span>
-                                  </div>
-                                  <div className="flex shrink-0 items-center gap-1 pl-1.5">
-                                    {isFileActive ? (
-                                      <span
-                                        className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
-                                        title="Arquivo aberto no visualizador"
+                                <ContextMenu key={file.id} items={rootFileContextMenuItems}>
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSidebarSelectFile(file);
+                                    }}
+                                    className={`group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 font-mono text-xs transition ${
+                                      isFileActive
+                                        ? "bg-[#c96726]/15 text-[#1a1614] dark:text-[#fafbf7] font-semibold border-l-2 border-[#c96726]"
+                                        : "text-[#736d67] hover:bg-[#1a1614]/5 hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:bg-white/5 dark:hover:text-[#fafbf7]"
+                                    }`}
+                                    title={`${file.name} (${formatBytes(file.size)})`}
+                                  >
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                      <FileCategoryIcon
+                                        category={file.category}
+                                        className="h-3.5 w-3.5 shrink-0"
                                       />
-                                    ) : (
-                                      <span className="font-mono text-[9px] uppercase tracking-wider text-[#736d67]/50 dark:text-[#9c968f]/50">
-                                        {file.extension}
-                                      </span>
-                                    )}
+                                      <span className="truncate">{file.name}</span>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-1 pl-1.5">
+                                      {isFileActive ? (
+                                        <span
+                                          className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
+                                          title="Arquivo aberto no visualizador"
+                                        />
+                                      ) : (
+                                        <span className="font-mono text-[9px] uppercase tracking-wider text-[#736d67]/50 dark:text-[#9c968f]/50">
+                                          {file.extension}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
+                                </ContextMenu>
                               );
                             })}
 
@@ -2016,13 +2346,23 @@ export default function ShowcaseApp({
 
       <FolderModal
         open={folderModalOpen}
-        semesterId={activeSemesterId || ""}
-        parentId={activeFolderId}
+        semesterId={targetFolderSemesterId || activeSemesterId || ""}
+        parentId={targetFolderParentId !== undefined ? targetFolderParentId : activeFolderId}
         editingFolder={editingFolder}
-        onClose={() => setFolderModalOpen(false)}
+        onClose={() => {
+          setFolderModalOpen(false);
+          setTargetFolderSemesterId(null);
+          setTargetFolderParentId(undefined);
+        }}
         onSaved={(folder, isNew) => {
           if (isNew) {
             setFolders((prev) => [...prev, folder]);
+            if (folder.parentId) {
+              setExpandedFolders((prev) => ({ ...prev, [folder.parentId!]: true }));
+            }
+            if (folder.semesterId) {
+              setExpandedSemesters((prev) => ({ ...prev, [folder.semesterId]: true }));
+            }
           } else {
             setFolders((prev) =>
               prev.map((f) => (f.id === folder.id ? folder : f))

@@ -19,6 +19,7 @@ import {
   List,
   Loader2,
   Lock,
+  MoreVertical,
   Music,
   PanelLeftClose,
   PanelLeftOpen,
@@ -42,6 +43,10 @@ import FolderModal from "./FolderModal";
 import ThemeToggle from "./ThemeToggle";
 import DocumentPreview from "./DocumentPreview";
 import ConfirmModal, { ConfirmDialogState } from "./ConfirmModal";
+import ExpandingSearch, { ExpandingSearchItem } from "./arc/ExpandingSearch";
+import ExpandingButtonGroup from "./arc/ExpandingButtonGroup";
+import DropdownMenu, { DropdownMenuItem } from "./arc/DropdownMenu";
+import ContextMenu, { ContextMenuItem } from "./arc/ContextMenu";
 
 interface ShowcaseAppProps {
   initialSemesters: Semester[];
@@ -244,6 +249,16 @@ export default function ShowcaseApp({
         f.extension.toLowerCase().includes(q)
     );
   }, [currentLevelFiles, search]);
+
+  // Sugestões para o Arc ExpandingSearch
+  const searchItems: ExpandingSearchItem[] = useMemo(() => {
+    return currentLevelFiles.map((f) => ({
+      id: f.id,
+      title: f.name,
+      meta: `${f.extension.toUpperCase()} · ${formatBytes(f.size)}`,
+      icon: <FileCategoryIcon category={f.category} className="h-4 w-4" />,
+    }));
+  }, [currentLevelFiles]);
 
   const selectedFile = useMemo(
     () => files.find((f) => f.id === selectedFileId) || null,
@@ -865,39 +880,39 @@ export default function ShowcaseApp({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Busca */}
-                  {activeSemesterId && currentLevelFiles.length > 2 && (
-                    <div className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
-                      <Search className="h-4 w-4 text-neutral-400" />
-                      <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Buscar..."
-                        className="w-24 sm:w-36 bg-transparent text-xs outline-none placeholder:text-neutral-400"
-                      />
-                    </div>
+                  {/* Busca Expansível Arc */}
+                  {activeSemesterId && currentLevelFiles.length > 0 && (
+                    <ExpandingSearch
+                      value={search}
+                      onChange={setSearch}
+                      items={searchItems}
+                      onSelect={(item) => setSelectedFileId(item.id)}
+                      placeholder="Buscar nesta pasta..."
+                    />
                   )}
 
-                  {/* Alternar Grid / Lista */}
-                  <div className="hidden sm:flex items-center rounded-lg border border-neutral-200 bg-white p-0.5 dark:border-neutral-800 dark:bg-neutral-900">
-                    <button
-                      type="button"
-                      onClick={() => setViewMode("grid")}
-                      className={`rounded p-1.5 transition ${viewMode === "grid" ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100" : "text-neutral-400 hover:text-neutral-700"}`}
-                      title="Visualização em grade"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode("list")}
-                      className={`rounded p-1.5 transition ${viewMode === "list" ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100" : "text-neutral-400 hover:text-neutral-700"}`}
-                      title="Visualização em lista"
-                    >
-                      <List className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {/* Alternar Grid / Lista com ExpandingButtonGroup Arc */}
+                  {activeSemesterId && currentLevelFiles.length > 0 && (
+                    <ExpandingButtonGroup
+                      className="hidden sm:inline-flex"
+                      items={[
+                        {
+                          id: "grid",
+                          label: "Grade",
+                          icon: <LayoutGrid className="h-4 w-4" />,
+                          active: viewMode === "grid",
+                          onClick: () => setViewMode("grid"),
+                        },
+                        {
+                          id: "list",
+                          label: "Lista",
+                          icon: <List className="h-4 w-4" />,
+                          active: viewMode === "list",
+                          onClick: () => setViewMode("list"),
+                        },
+                      ]}
+                    />
+                  )}
 
                   {/* Ações Administrativas */}
                   {isAdmin && (
@@ -970,62 +985,100 @@ export default function ShowcaseApp({
                       const semFilesCount = files.filter((f) => f.semesterId === sem.id).length;
                       const semFoldersCount = folders.filter((f) => f.semesterId === sem.id).length;
 
-                      return (
-                        <div
-                          key={sem.id}
-                          onClick={() => {
+                      const semesterMenuItems: ContextMenuItem[] = [
+                        {
+                          id: "open",
+                          label: "Abrir semestre",
+                          icon: <FolderOpen className="h-4 w-4 text-amber-500" />,
+                          onSelect: () => {
                             setActiveSemesterId(sem.id);
                             setActiveFolderId(null);
-                          }}
-                          className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
-                        >
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
-                                <FolderIcon className="h-6 w-6" />
-                              </div>
+                          },
+                        },
+                        {
+                          id: "qr",
+                          label: "Gerar QR Code",
+                          icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                          onSelect: () => {
+                            setActiveSemesterId(sem.id);
+                            setActiveFolderId(null);
+                            setQrScope("semester");
+                            setQrOpen(true);
+                          },
+                        },
+                        ...(isAdmin
+                          ? [
+                              {
+                                id: "edit",
+                                label: "Editar semestre",
+                                icon: <Edit3 className="h-4 w-4 text-neutral-500" />,
+                                separatorBefore: true,
+                                onSelect: () => {
+                                  setEditingSemester(sem);
+                                  setSemesterModalOpen(true);
+                                },
+                              },
+                              {
+                                id: "delete",
+                                label: "Excluir semestre",
+                                icon: <Trash2 className="h-4 w-4" />,
+                                destructive: true,
+                                onSelect: () => {
+                                  handleDeleteSemester({ stopPropagation: () => {} } as React.MouseEvent, sem);
+                                },
+                              },
+                            ]
+                          : []),
+                      ];
 
-                              {isAdmin && (
+                      return (
+                        <ContextMenu key={sem.id} items={semesterMenuItems}>
+                          <div
+                            onClick={() => {
+                              setActiveSemesterId(sem.id);
+                              setActiveFolderId(null);
+                            }}
+                            className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
+                                  <FolderIcon className="h-6 w-6" />
+                                </div>
+
                                 <div
                                   className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingSemester(sem);
-                                      setSemesterModalOpen(true);
-                                    }}
-                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                                    title="Editar semestre"
-                                  >
-                                    <Edit3 className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleDeleteSemester(e, sem)}
-                                    className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-                                    title="Excluir semestre"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                  <DropdownMenu
+                                    items={semesterMenuItems}
+                                    trigger={
+                                      <button
+                                        type="button"
+                                        className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                        title="Opções do semestre"
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </button>
+                                    }
+                                  />
                                 </div>
-                              )}
+                              </div>
+
+                              <h3 className="mt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                                {sem.name}
+                              </h3>
+                              <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
+                                {sem.title || "Projeto Integrador"}
+                              </p>
                             </div>
 
-                            <h3 className="mt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">
-                              {sem.name}
-                            </h3>
-                            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
-                              {sem.title || "Projeto Integrador"}
-                            </p>
+                            <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] text-neutral-400 dark:border-neutral-800/60">
+                              <span>{semFoldersCount} pasta(s)</span>
+                              <span>{semFilesCount} arquivo(s)</span>
+                            </div>
                           </div>
-
-                          <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[11px] text-neutral-400 dark:border-neutral-800/60">
-                            <span>{semFoldersCount} pasta(s)</span>
-                            <span>{semFilesCount} arquivo(s)</span>
-                          </div>
-                        </div>
+                        </ContextMenu>
                       );
                     })}
                   </div>
@@ -1044,53 +1097,87 @@ export default function ShowcaseApp({
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                         {currentSubfolders.map((fld) => {
                           const subFilesCount = files.filter((f) => f.folderId === fld.id).length;
-                          return (
-                            <div
-                              key={fld.id}
-                              onClick={() => setActiveFolderId(fld.id)}
-                              className="group flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
-                                  <FolderIcon className="h-5 w-5" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
-                                    {fld.name}
-                                  </p>
-                                  <p className="text-[11px] text-neutral-400">
-                                    {subFilesCount} arquivo(s)
-                                  </p>
-                                </div>
-                              </div>
+                          const folderMenuItems: ContextMenuItem[] = [
+                            {
+                              id: "open",
+                              label: "Abrir pasta",
+                              icon: <FolderOpen className="h-4 w-4 text-amber-500" />,
+                              onSelect: () => setActiveFolderId(fld.id),
+                            },
+                            {
+                              id: "qr",
+                              label: "Gerar QR Code da pasta",
+                              icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                              onSelect: () => {
+                                setActiveFolderId(fld.id);
+                                setQrScope("folder");
+                                setQrOpen(true);
+                              },
+                            },
+                            ...(isAdmin
+                              ? [
+                                  {
+                                    id: "edit",
+                                    label: "Renomear pasta",
+                                    icon: <Edit3 className="h-4 w-4 text-neutral-500" />,
+                                    separatorBefore: true,
+                                    onSelect: () => {
+                                      setEditingFolder(fld);
+                                      setFolderModalOpen(true);
+                                    },
+                                  },
+                                  {
+                                    id: "delete",
+                                    label: "Excluir pasta",
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    destructive: true,
+                                    onSelect: () => {
+                                      handleDeleteFolder({ stopPropagation: () => {} } as React.MouseEvent, fld);
+                                    },
+                                  },
+                                ]
+                              : []),
+                          ];
 
-                              {isAdmin && (
+                          return (
+                            <ContextMenu key={fld.id} items={folderMenuItems}>
+                              <div
+                                onClick={() => setActiveFolderId(fld.id)}
+                                className="group flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 transition group-hover:scale-105 dark:bg-amber-400/10 dark:text-amber-400">
+                                    <FolderIcon className="h-5 w-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-neutral-900 transition group-hover:text-amber-600 dark:text-neutral-100 dark:group-hover:text-amber-400">
+                                      {fld.name}
+                                    </p>
+                                    <p className="text-[11px] text-neutral-400">
+                                      {subFilesCount} arquivo(s)
+                                    </p>
+                                  </div>
+                                </div>
+
                                 <div
                                   className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingFolder(fld);
-                                      setFolderModalOpen(true);
-                                    }}
-                                    className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                                    title="Renomear pasta"
-                                  >
-                                    <Edit3 className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleDeleteFolder(e, fld)}
-                                    className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-                                    title="Excluir pasta"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                  <DropdownMenu
+                                    items={folderMenuItems}
+                                    trigger={
+                                      <button
+                                        type="button"
+                                        className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                        title="Opções da pasta"
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </button>
+                                    }
+                                  />
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            </ContextMenu>
                           );
                         })}
                       </div>
@@ -1134,113 +1221,235 @@ export default function ShowcaseApp({
                     ) : viewMode === "grid" ? (
                       /* Grade de Arquivos com Preview de Documento */
                       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                        {filteredFiles.map((file) => (
-                          <div
-                            key={file.id}
-                            onClick={() => setSelectedFileId(file.id)}
-                            className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
-                          >
-                            <div>
-                              {/* Preview do Documento no Card */}
-                              <div className="relative mb-3 h-36 sm:h-40 w-full overflow-hidden rounded-lg border border-neutral-200/80 bg-neutral-100/70 dark:border-neutral-800 dark:bg-neutral-950">
-                                <DocumentPreview file={file} />
+                        {filteredFiles.map((file) => {
+                          const fileMenuItems: ContextMenuItem[] = [
+                            {
+                              id: "view",
+                              label: "Abrir documento",
+                              icon: <FileCategoryIcon category={file.category} className="h-4 w-4" />,
+                              onSelect: () => setSelectedFileId(file.id),
+                            },
+                            {
+                              id: "download",
+                              label: "Baixar arquivo",
+                              icon: <Download className="h-4 w-4 text-sky-500" />,
+                              onSelect: () => {
+                                const a = document.createElement("a");
+                                a.href = file.url;
+                                a.download = file.name;
+                                a.target = "_blank";
+                                a.rel = "noopener noreferrer";
+                                a.click();
+                              },
+                            },
+                            {
+                              id: "qr",
+                              label: "Gerar QR Code",
+                              icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                              onSelect: () => {
+                                setSelectedFileId(file.id);
+                                setQrScope("file");
+                                setQrOpen(true);
+                              },
+                            },
+                            ...(isAdmin
+                              ? [
+                                  {
+                                    id: "delete",
+                                    label: "Excluir arquivo",
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    destructive: true,
+                                    separatorBefore: true,
+                                    onSelect: () => {
+                                      handleDeleteFile({ stopPropagation: () => {} } as React.MouseEvent, file);
+                                    },
+                                  },
+                                ]
+                              : []),
+                          ];
 
-                                {/* Badge com a extensão */}
-                                <span className="absolute left-2 top-2 rounded bg-neutral-900/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white shadow-xs backdrop-blur-xs dark:bg-neutral-100/90 dark:text-neutral-900">
-                                  {file.extension.toUpperCase() || "ARQ"}
-                                </span>
+                          return (
+                            <ContextMenu key={file.id} items={fileMenuItems}>
+                              <div
+                                onClick={() => setSelectedFileId(file.id)}
+                                className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                              >
+                                <div>
+                                  {/* Preview do Documento no Card */}
+                                  <div className="relative mb-3 h-36 sm:h-40 w-full overflow-hidden rounded-lg border border-neutral-200/80 bg-neutral-100/70 dark:border-neutral-800 dark:bg-neutral-950">
+                                    <DocumentPreview file={file} />
 
-                                {/* Ações no hover */}
+                                    {/* Badge com a extensão */}
+                                    <span className="absolute left-2 top-2 rounded bg-neutral-900/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white shadow-xs backdrop-blur-xs dark:bg-neutral-100/90 dark:text-neutral-900">
+                                      {file.extension.toUpperCase() || "ARQ"}
+                                    </span>
+
+                                    {/* Ações no hover / mobile */}
+                                    <div
+                                      className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/90 p-1 opacity-90 sm:opacity-0 shadow-xs backdrop-blur-xs transition sm:group-hover:opacity-100 dark:bg-neutral-900/90"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <a
+                                        href={file.url}
+                                        download={file.name}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="rounded p-1 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                                        title="Baixar arquivo"
+                                      >
+                                        <Download className="h-3.5 w-3.5" />
+                                      </a>
+                                      <DropdownMenu
+                                        items={fileMenuItems}
+                                        trigger={
+                                          <button
+                                            type="button"
+                                            className="rounded p-1 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                                            title="Mais opções"
+                                          >
+                                            <MoreVertical className="h-3.5 w-3.5" />
+                                          </button>
+                                        }
+                                      />
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleDeleteFile(e, file)}
+                                          className="rounded p-1 text-neutral-600 hover:bg-red-50 hover:text-red-600 dark:text-neutral-300 dark:hover:bg-red-950/40"
+                                          title="Excluir arquivo"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <FileCategoryIcon category={file.category} className="h-4 w-4 shrink-0" />
+                                    <p className="truncate text-xs sm:text-sm font-semibold text-neutral-900 dark:text-neutral-100" title={file.name}>
+                                      {file.name}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2 text-[11px] text-neutral-400 dark:border-neutral-800/60">
+                                  <span className="font-mono uppercase font-semibold text-neutral-500 dark:text-neutral-400">
+                                    {file.extension || "ARQ"}
+                                  </span>
+                                  <span>{formatBytes(file.size)}</span>
+                                </div>
+                              </div>
+                            </ContextMenu>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* Lista de Arquivos */
+                      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
+                        {filteredFiles.map((file) => {
+                          const fileMenuItems: ContextMenuItem[] = [
+                            {
+                              id: "view",
+                              label: "Abrir documento",
+                              icon: <FileCategoryIcon category={file.category} className="h-4 w-4" />,
+                              onSelect: () => setSelectedFileId(file.id),
+                            },
+                            {
+                              id: "download",
+                              label: "Baixar arquivo",
+                              icon: <Download className="h-4 w-4 text-sky-500" />,
+                              onSelect: () => {
+                                const a = document.createElement("a");
+                                a.href = file.url;
+                                a.download = file.name;
+                                a.target = "_blank";
+                                a.rel = "noopener noreferrer";
+                                a.click();
+                              },
+                            },
+                            {
+                              id: "qr",
+                              label: "Gerar QR Code",
+                              icon: <QrCode className="h-4 w-4 text-neutral-500" />,
+                              onSelect: () => {
+                                setSelectedFileId(file.id);
+                                setQrScope("file");
+                                setQrOpen(true);
+                              },
+                            },
+                            ...(isAdmin
+                              ? [
+                                  {
+                                    id: "delete",
+                                    label: "Excluir arquivo",
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    destructive: true,
+                                    separatorBefore: true,
+                                    onSelect: () => {
+                                      handleDeleteFile({ stopPropagation: () => {} } as React.MouseEvent, file);
+                                    },
+                                  },
+                                ]
+                              : []),
+                          ];
+
+                          return (
+                            <ContextMenu key={file.id} items={fileMenuItems}>
+                              <div
+                                onClick={() => setSelectedFileId(file.id)}
+                                className="group flex cursor-pointer items-center justify-between p-3 text-xs transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <FileCategoryIcon category={file.category} />
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium text-neutral-900 dark:text-neutral-100">
+                                      {file.name}
+                                    </p>
+                                    <p className="text-[10px] text-neutral-400">
+                                      {file.extension.toUpperCase()} · {formatBytes(file.size)}
+                                    </p>
+                                  </div>
+                                </div>
+
                                 <div
-                                  className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/90 p-1 opacity-0 shadow-xs backdrop-blur-xs transition group-hover:opacity-100 dark:bg-neutral-900/90"
+                                  className="flex items-center gap-1 opacity-90 sm:opacity-70 transition sm:group-hover:opacity-100"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <a
                                     href={file.url}
                                     download={file.name}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded p-1 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
-                                    title="Baixar arquivo"
+                                    className="rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                    title="Baixar"
                                   >
-                                    <Download className="h-3.5 w-3.5" />
+                                    <Download className="h-4 w-4" />
                                   </a>
+                                  <DropdownMenu
+                                    items={fileMenuItems}
+                                    trigger={
+                                      <button
+                                        type="button"
+                                        className="rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                                        title="Mais opções"
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </button>
+                                    }
+                                  />
                                   {isAdmin && (
                                     <button
                                       type="button"
                                       onClick={(e) => handleDeleteFile(e, file)}
-                                      className="rounded p-1 text-neutral-600 hover:bg-red-50 hover:text-red-600 dark:text-neutral-300 dark:hover:bg-red-950/40"
-                                      title="Excluir arquivo"
+                                      className="rounded p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                                      title="Excluir"
                                     >
-                                      <Trash2 className="h-3.5 w-3.5" />
+                                      <Trash2 className="h-4 w-4" />
                                     </button>
                                   )}
                                 </div>
                               </div>
-
-                              <div className="flex items-center gap-2">
-                                <FileCategoryIcon category={file.category} className="h-4 w-4 shrink-0" />
-                                <p className="truncate text-xs sm:text-sm font-semibold text-neutral-900 dark:text-neutral-100" title={file.name}>
-                                  {file.name}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2 text-[11px] text-neutral-400 dark:border-neutral-800/60">
-                              <span className="font-mono uppercase font-semibold text-neutral-500 dark:text-neutral-400">
-                                {file.extension || "ARQ"}
-                              </span>
-                              <span>{formatBytes(file.size)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      /* Lista de Arquivos */
-                      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
-                        {filteredFiles.map((file) => (
-                          <div
-                            key={file.id}
-                            onClick={() => setSelectedFileId(file.id)}
-                            className="group flex cursor-pointer items-center justify-between p-3 text-xs transition hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <FileCategoryIcon category={file.category} />
-                              <div className="min-w-0">
-                                <p className="truncate font-medium text-neutral-900 dark:text-neutral-100">
-                                  {file.name}
-                                </p>
-                                <p className="text-[10px] text-neutral-400">
-                                  {file.extension.toUpperCase()} · {formatBytes(file.size)}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div
-                              className="flex items-center gap-1 opacity-70 transition group-hover:opacity-100"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <a
-                                href={file.url}
-                                download={file.name}
-                                className="rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                                title="Baixar"
-                              >
-                                <Download className="h-4 w-4" />
-                              </a>
-                              {isAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteFile(e, file)}
-                                  className="rounded p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-                                  title="Excluir"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                            </ContextMenu>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

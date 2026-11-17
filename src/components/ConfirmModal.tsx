@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { AlertTriangle, Info, Trash2, X } from "lucide-react";
+import HoldToConfirm from "./arc/HoldToConfirm";
 
 export interface ConfirmDialogState {
   open: boolean;
@@ -109,24 +110,34 @@ export default function ConfirmModal({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={async () => {
-              if (onConfirm) {
+          {variant === "danger" && onConfirm ? (
+            <HoldToConfirm
+              label={confirmText || "Segure para excluir"}
+              confirmedLabel="Excluindo..."
+              tone="danger"
+              onConfirm={async () => {
                 await onConfirm();
-              }
-              onClose();
-            }}
-            className={`rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-xs transition ${
-              variant === "danger"
-                ? "bg-rose-600 hover:bg-rose-700 active:bg-rose-800"
-                : variant === "warning"
-                ? "bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
-                : "bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-            }`}
-          >
-            {confirmText}
-          </button>
+                setTimeout(() => onClose(), 450);
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={async () => {
+                if (onConfirm) {
+                  await onConfirm();
+                }
+                onClose();
+              }}
+              className={`rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-xs transition ${
+                variant === "warning"
+                  ? "bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
+                  : "bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+              }`}
+            >
+              {confirmText}
+            </button>
+          )}
         </div>
       </div>
     </div>

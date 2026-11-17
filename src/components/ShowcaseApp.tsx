@@ -1710,19 +1710,6 @@ export default function ShowcaseApp({
                         <span className="text-[#c96726] dark:text-[#d77435] font-bold">{String(files.length).padStart(2, "0")}</span>
                         <span className="text-[#736d67] dark:text-[#9c968f]">DOCUMENTOS</span>
                       </div>
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingSemester(null);
-                            setSemesterModalOpen(true);
-                          }}
-                          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[#1a1614] px-4 py-1.5 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          <span>NOVO SEMESTRE</span>
-                        </button>
-                      )}
                     </div>
                   </div>
 

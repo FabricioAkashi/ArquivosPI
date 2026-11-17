@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
+  consumeRateLimit,
+  getClientIp,
+  rateLimitErrorResponse,
+  WRITE_RATE_LIMIT,
+} from "@/lib/rate-limit";
+import {
   registerCloudFileRecord,
   saveLocalFileAndRecord,
 } from "@/lib/storage";
 
+const MAX_LOCAL_FILE_BYTES = 100 * 1024 * 1024; // 100 MB
+
 export async function POST(req: NextRequest) {
+  const rl = consumeRateLimit(
+    `write:${getClientIp(req)}`,
+    WRITE_RATE_LIMIT.limit,
+    WRITE_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json(
       { error: "Modo de edição bloqueado. Desbloqueie com o PIN." },
@@ -57,8 +74,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (file.size > MAX_LOCAL_FILE_BYTES) {
+      return NextResponse.json(
+        { error: "O arquivo excede o limite máximo permitido de 100 MB." },
+        { status: 413 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    if (buffer.length > MAX_LOCAL_FILE_BYTES) {
+      return NextResponse.json(
+        { error: "O arquivo excede o limite máximo permitido de 100 MB." },
+        { status: 413 }
+      );
+    }
 
     const saved = await saveLocalFileAndRecord({
       semesterId,

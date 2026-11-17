@@ -3,16 +3,71 @@ import fsp from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
+  consumeRateLimit,
+  getClientIp,
+  rateLimitErrorResponse,
+  READ_RATE_LIMIT,
+  WRITE_RATE_LIMIT,
+} from "@/lib/rate-limit";
+import {
   deleteFileRecord,
   getCloudFileStream,
   getFileById,
   resolveLocalUploadPath,
 } from "@/lib/storage";
 
+function buildSafeFileHeaders(params: {
+  fileName: string;
+  extension: string;
+  mimeType: string;
+  isDownload: boolean;
+}): Record<string, string> {
+  const encodedName = encodeURIComponent(params.fileName);
+  const ext = params.extension.toLowerCase();
+  const mime = params.mimeType.toLowerCase();
+
+  const isHtmlLike =
+    mime.includes("text/html") ||
+    mime.includes("application/xhtml+xml") ||
+    ext === "html" ||
+    ext === "htm" ||
+    ext === "xhtml";
+
+  const isSvg = mime.includes("image/svg+xml") || ext === "svg";
+
+  // HTML/XHTML sempre servidos como attachment para evitar execução na origem principal
+  const disposition =
+    params.isDownload || isHtmlLike
+      ? `attachment; filename*=UTF-8''${encodedName}`
+      : `inline; filename*=UTF-8''${encodedName}`;
+
+  const headers: Record<string, string> = {
+    "Content-Type": params.mimeType || "application/octet-stream",
+    "Content-Disposition": disposition,
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "private, max-age=3600",
+  };
+
+  if (isHtmlLike || isSvg) {
+    headers["Content-Security-Policy"] = "sandbox; default-src 'none'";
+  }
+
+  return headers;
+}
+
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const rl = consumeRateLimit(
+    `read:${getClientIp(req)}`,
+    READ_RATE_LIMIT.limit,
+    READ_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
   try {
     const { id } = await context.params;
     const file = await getFileById(id);
@@ -25,10 +80,6 @@ export async function GET(
     }
 
     const isDownload = req.nextUrl.searchParams.get("download") === "1";
-    const encodedName = encodeURIComponent(file.name);
-    const disposition = isDownload
-      ? `attachment; filename*=UTF-8''${encodedName}`
-      : `inline; filename*=UTF-8''${encodedName}`;
 
     if (
       file.storageKey.startsWith("http://") ||
@@ -42,16 +93,19 @@ export async function GET(
         );
       }
 
+      const headers = buildSafeFileHeaders({
+        fileName: file.name,
+        extension: file.extension,
+        mimeType:
+          result.blob.contentType ||
+          file.mimeType ||
+          "application/octet-stream",
+        isDownload,
+      });
+
       return new NextResponse(result.stream, {
         status: 200,
-        headers: {
-          "Content-Type":
-            result.blob.contentType ||
-            file.mimeType ||
-            "application/octet-stream",
-          "Content-Disposition": disposition,
-          "Cache-Control": "private, max-age=3600",
-        },
+        headers,
       });
     }
 
@@ -67,6 +121,13 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    const baseHeaders = buildSafeFileHeaders({
+      fileName: file.name,
+      extension: file.extension,
+      mimeType: file.mimeType || "application/octet-stream",
+      isDownload,
+    });
 
     const range = req.headers.get("range");
     if (range) {
@@ -96,11 +157,10 @@ export async function GET(
         return new NextResponse(webStream, {
           status: 206,
           headers: {
+            ...baseHeaders,
             "Content-Range": `bytes ${start}-${end}/${stat.size}`,
             "Accept-Ranges": "bytes",
             "Content-Length": String(chunkSize),
-            "Content-Type": file.mimeType || "application/octet-stream",
-            "Content-Disposition": disposition,
           },
         });
       }
@@ -110,11 +170,9 @@ export async function GET(
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Type": file.mimeType || "application/octet-stream",
+        ...baseHeaders,
         "Content-Length": String(stat.size),
-        "Content-Disposition": disposition,
         "Accept-Ranges": "bytes",
-        "Cache-Control": "private, max-age=3600",
       },
     });
   } catch (err) {
@@ -127,9 +185,18 @@ export async function GET(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const rl = consumeRateLimit(
+    `write:${getClientIp(req)}`,
+    WRITE_RATE_LIMIT.limit,
+    WRITE_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json(
       { error: "Modo de edição bloqueado." },

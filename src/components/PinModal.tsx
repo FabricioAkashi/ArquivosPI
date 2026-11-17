@@ -104,7 +104,11 @@ export default function PinModal({
             className="w-full rounded-full border border-[#1a1614]/15 bg-[#f5f6f1] px-4 py-2.5 font-mono text-sm text-[#1a1614] outline-none transition focus:border-[#c96726] dark:border-white/15 dark:bg-[#161311] dark:text-[#fafbf7] dark:focus:border-[#d77435]"
           />
 
-          {error && <p className="font-mono text-xs text-rose-500">{error}</p>}
+          {error && (
+            <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 font-mono text-xs text-rose-600 dark:text-rose-400">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"

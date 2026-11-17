@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import {
+  consumeRateLimit,
+  getClientIp,
+  rateLimitErrorResponse,
+  WRITE_RATE_LIMIT,
+} from "@/lib/rate-limit";
 import { deleteFolder, updateFolder } from "@/lib/storage";
 
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const rl = consumeRateLimit(
+    `write:${getClientIp(req)}`,
+    WRITE_RATE_LIMIT.limit,
+    WRITE_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json(
       { error: "Modo de edição bloqueado." },
@@ -43,9 +58,18 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const rl = consumeRateLimit(
+    `write:${getClientIp(req)}`,
+    WRITE_RATE_LIMIT.limit,
+    WRITE_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json(
       { error: "Modo de edição bloqueado." },

@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { isAdminAuthenticated } from "@/lib/auth";
+import {
+  consumeRateLimit,
+  getClientIp,
+  rateLimitErrorResponse,
+  WRITE_RATE_LIMIT,
+} from "@/lib/rate-limit";
 import { isCloudStorageEnabled } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
+  const rl = consumeRateLimit(
+    `write:${getClientIp(request)}`,
+    WRITE_RATE_LIMIT.limit,
+    WRITE_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
   if (!isCloudStorageEnabled() || !process.env.BLOB_READ_WRITE_TOKEN) {
     return NextResponse.json(
       { error: "Vercel Blob ou BLOB_READ_WRITE_TOKEN não configurado." },

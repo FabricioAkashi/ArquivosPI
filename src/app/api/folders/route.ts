@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import {
+  consumeRateLimit,
+  getClientIp,
+  rateLimitErrorResponse,
+  WRITE_RATE_LIMIT,
+} from "@/lib/rate-limit";
 import { createFolder } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
+  const rl = consumeRateLimit(
+    `write:${getClientIp(req)}`,
+    WRITE_RATE_LIMIT.limit,
+    WRITE_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json(
       { error: "Modo de edição bloqueado. Desbloqueie com o PIN." },

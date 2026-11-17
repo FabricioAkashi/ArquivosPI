@@ -50,3 +50,8 @@
   background: #ffffff !important;
   color: #111111 !important;
 }
+
+.docx-host img {
+  max-width: 100% !important;
+  object-fit: contain;
+}

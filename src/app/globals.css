@@ -13,9 +13,10 @@
   --accent-copper: #c96726;
   --accent-green: #6d8352;
   --accent-lime: #899200;
-  --orb-copper: rgba(201, 103, 38, 0.055);
-  --orb-green: rgba(109, 131, 82, 0.045);
-  --orb-lime: rgba(137, 146, 0, 0.035);
+  --orb-copper: rgba(201, 103, 38, 0.13);
+  --orb-green: rgba(109, 131, 82, 0.10);
+  --orb-lime: rgba(137, 146, 0, 0.085);
+  --orb-cursor: rgba(201, 103, 38, 0.09);
   --font-serif: "Newsreader", "Test Signifier", "Georgia", "Ivar Text", serif;
   --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
@@ -32,9 +33,10 @@ html.dark {
   --accent-copper: #d77435;
   --accent-green: #7f9564;
   --accent-lime: #bdc848;
-  --orb-copper: rgba(215, 116, 53, 0.075);
-  --orb-green: rgba(127, 149, 100, 0.06);
-  --orb-lime: rgba(189, 200, 72, 0.045);
+  --orb-copper: rgba(215, 116, 53, 0.16);
+  --orb-green: rgba(127, 149, 100, 0.13);
+  --orb-lime: rgba(189, 200, 72, 0.10);
+  --orb-cursor: rgba(215, 116, 53, 0.11);
 }
 
 @layer base {
@@ -151,6 +153,11 @@ html.dark .antimetal-dots {
 .ambient-orb-3 {
   background: radial-gradient(circle at center, var(--orb-lime) 0%, transparent 70%);
   animation: orb-drift-3 38s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.ambient-orb-cursor {
+  background: radial-gradient(circle at center, var(--orb-cursor) 0%, transparent 68%);
   will-change: transform;
 }
 

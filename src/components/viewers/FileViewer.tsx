@@ -20,6 +20,7 @@ import { formatBytes } from "@/lib/file-utils";
 import ImageViewer from "./ImageViewer";
 import TextViewer from "./TextViewer";
 import MediaViewer from "./MediaViewer";
+import AmbientOrbs from "../AmbientOrbs";
 
 const PdfViewer = dynamic(() => import("./PdfViewer"), { ssr: false });
 const DocxViewer = dynamic(() => import("./DocxViewer"), { ssr: false });
@@ -133,14 +134,16 @@ export default function FileViewer({
   return (
     <div
       ref={wrapperRef}
-      className={`flex flex-col bg-[#f5f6f1] text-[#1a1614] dark:bg-[#161311] dark:text-[#fafbf7] ${
+      className={`flex flex-col text-[#1a1614] dark:text-[#fafbf7] ${
         isFullscreen
-          ? "fixed inset-0 z-[100] h-[100dvh] w-screen overflow-hidden"
-          : "relative h-full overflow-hidden"
+          ? "fixed inset-0 z-[100] h-[100dvh] w-screen overflow-hidden bg-[#f5f6f1] dark:bg-[#161311]"
+          : "relative h-full overflow-hidden bg-transparent"
       }`}
     >
+      {isFullscreen && <AmbientOrbs />}
+
       {/* Top File Header */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#1a1614]/10 bg-white/80 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur-md dark:border-white/10 dark:bg-[#201c19]/80">
+      <div className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#1a1614]/10 bg-white/80 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur-md dark:border-white/10 dark:bg-[#201c19]/80">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* Main Navigation Arrows (Enlarged & accessible for mobile + desktop) */}
           <div className="flex items-center gap-1.5">
@@ -271,7 +274,7 @@ export default function FileViewer({
       </div>
 
       {/* Main Viewer Body with Floating Side Arrows */}
-      <div className="relative min-h-0 flex-1">
+      <div className="relative z-10 min-h-0 flex-1">
         {/* Floating Left Arrow (Fast click on mobile / desktop edges) */}
         {hasPrev && (
           <button

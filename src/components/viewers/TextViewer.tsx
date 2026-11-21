@@ -123,7 +123,7 @@ export default function TextViewer({ url, name }: TextViewerProps) {
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#f5f6f1] dark:bg-[#161311]">
+    <div className="flex h-full flex-col bg-transparent">
       {/* Barra Técnica Superior do Visualizador de Código */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-[#1a1614]/15 bg-white/75 px-3 sm:px-4 py-2 text-xs backdrop-blur-xs dark:border-white/10 dark:bg-[#201c19]/75">
         <div className="flex flex-wrap items-center gap-2">
@@ -209,7 +209,7 @@ export default function TextViewer({ url, name }: TextViewerProps) {
 
       {/* Área do Código com Números de Linha e Realce de Sintaxe */}
       <div className="flex-1 overflow-auto p-3 sm:p-6">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-[#1a1614]/12 bg-white shadow-xs dark:border-white/10 dark:bg-[#1b1815]">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-[#1a1614]/12 bg-white/95 shadow-xs backdrop-blur-xs dark:border-white/10 dark:bg-[#1b1815]/95">
           {/* Sub-barra estilo Prettier / Blueprint */}
           <div className="flex items-center justify-between border-b border-dashed border-[#1a1614]/10 bg-[#f5f6f1]/70 px-4 py-2 font-mono text-[10px] text-[#736d67] dark:border-white/10 dark:bg-[#201c19]/80 dark:text-[#9c968f]">
             <span className="truncate font-medium text-[#1a1614] dark:text-[#fafbf7]">

@@ -40,6 +40,7 @@ import SemesterModal from "./SemesterModal";
 import FolderModal from "./FolderModal";
 import ThemeToggle from "./ThemeToggle";
 import DocumentPreview from "./DocumentPreview";
+import AmbientOrbs from "./AmbientOrbs";
 import ConfirmModal, { ConfirmDialogState } from "./ConfirmModal";
 import ExpandingSearch, { ExpandingSearchItem } from "./arc/ExpandingSearch";
 import ExpandingButtonGroup from "./arc/ExpandingButtonGroup";
@@ -1062,6 +1063,9 @@ export default function ShowcaseApp({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
+      {/* Background Animado Ultra-Sutil com Gradient Orbs (Paleta Antimetal) */}
+      <AmbientOrbs />
+
       {/* Fullscreen Drag Overlay */}
       {isDragging && isAdmin && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
@@ -1114,7 +1118,7 @@ export default function ShowcaseApp({
       />
 
       {/* Main Body */}
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+      <div className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
         {/* Backdrop escuro no mobile quando o sidebar está aberto */}
         {sidebarOpen && (
           <div
@@ -1492,7 +1496,7 @@ export default function ShowcaseApp({
         </aside>
 
         {/* Área Central: Visualizador OU Explorador de Arquivos */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#f5f6f1] dark:bg-[#161311]">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
           {selectedFile ? (
             /* Modo 1: Visualizador de Arquivo em Tela Cheia */
             <div className="flex h-full flex-col">

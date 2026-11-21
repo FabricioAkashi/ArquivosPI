@@ -2,19 +2,24 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Archive,
   ArrowLeft,
   ChevronDown,
   ChevronRight,
   Copy,
   Download,
   Edit3,
+  ExternalLink,
+  FileArchive,
   FileCode2,
   FileSpreadsheet,
   FileText,
   Film,
   Folder as FolderIcon,
+  FolderInput,
   FolderOpen,
   FolderPlus,
+  GraduationCap,
   Home,
   Image as ImageIcon,
   LayoutGrid,
@@ -22,22 +27,28 @@ import {
   Loader2,
   MoreVertical,
   Music,
+  Pin,
+  PinOff,
   Plus,
   Presentation,
   QrCode,
   Search,
   Trash2,
   UploadCloud,
+  Users,
   X,
 } from "lucide-react";
 import { upload as blobUpload } from "@vercel/blob/client";
 import { FileCategory, FileItem, Folder, Semester } from "@/lib/types";
 import { formatBytes } from "@/lib/file-utils";
+import { downloadFolderAsZip } from "@/lib/folder-zip";
 import FileViewer from "./viewers/FileViewer";
 import QrCodeModal from "./QrCodeModal";
 import PinModal from "./PinModal";
 import SemesterModal from "./SemesterModal";
 import FolderModal from "./FolderModal";
+import FileActionsModal, { FileActionMode } from "./FileActionsModal";
+import CommandPalette from "./CommandPalette";
 import ThemeToggle from "./ThemeToggle";
 import DocumentPreview from "./DocumentPreview";
 import AmbientOrbs from "./AmbientOrbs";
@@ -62,8 +73,19 @@ interface ShowcaseAppProps {
   blobAccess: "private" | "public";
 }
 
-function FileCategoryIcon({ category, className = "h-5 w-5" }: { category: FileCategory; className?: string }) {
+function FileCategoryIcon({
+  category,
+  extension,
+  className = "h-5 w-5",
+}: {
+  category: FileCategory;
+  extension?: string;
+  className?: string;
+}) {
   const cls = `${className} shrink-0`;
+  if (category === "other" && extension?.toLowerCase() === "zip") {
+    return <FileArchive className={`${cls} text-[#c96726] dark:text-[#d77435]`} />;
+  }
   switch (category) {
     case "pdf":
       return <FileText className={`${cls} text-rose-500`} />;
@@ -108,19 +130,14 @@ interface SidebarFolderNodeProps {
   activeFolderId: string | null;
   selectedFileId: string | null;
   expandedFolders: Record<string, boolean>;
-  isAdmin: boolean;
   onToggleFolder: (folderId: string) => void;
   onSelectFolder: (folder: Folder) => void;
   onSelectFile: (file: FileItem) => void;
-  onOpenQrFolder: (folder: Folder) => void;
-  onNewSubfolder: (folder: Folder) => void;
-  onUploadToFolder: (folder: Folder) => void;
-  onEditFolder: (folder: Folder) => void;
-  onDeleteFolder: (folder: Folder) => void;
-  onOpenQrFile: (file: FileItem) => void;
-  onDownloadFile: (file: FileItem) => void;
-  onCopyFileLink: (file: FileItem) => void;
-  onDeleteFile: (file: FileItem) => void;
+  buildFolderMenuItems: (
+    folder: Folder,
+    opts?: { isExpanded?: boolean; onToggle?: () => void }
+  ) => ContextMenuItem[];
+  buildFileMenuItems: (file: FileItem) => ContextMenuItem[];
   depth?: number;
 }
 
@@ -132,19 +149,11 @@ function SidebarFolderNode({
   activeFolderId,
   selectedFileId,
   expandedFolders,
-  isAdmin,
   onToggleFolder,
   onSelectFolder,
   onSelectFile,
-  onOpenQrFolder,
-  onNewSubfolder,
-  onUploadToFolder,
-  onEditFolder,
-  onDeleteFolder,
-  onOpenQrFile,
-  onDownloadFile,
-  onCopyFileLink,
-  onDeleteFile,
+  buildFolderMenuItems,
+  buildFileMenuItems,
   depth = 0,
 }: SidebarFolderNodeProps) {
   // Uma pasta é considerada aberta se explicitamente expandida ou se for a pasta ativa no momento
@@ -157,61 +166,10 @@ function SidebarFolderNode({
   const folderFiles = allFiles.filter((f) => f.folderId === folder.id);
   const hasItems = childFolders.length > 0 || folderFiles.length > 0;
 
-  const folderContextMenuItems: ContextMenuItem[] = [
-    {
-      id: "open",
-      label: "Abrir pasta",
-      icon: <FolderOpen className="h-4 w-4 text-[#c96726]" />,
-      onSelect: () => onSelectFolder(folder),
-    },
-    {
-      id: "toggle",
-      label: isExpanded ? "Recolher pasta" : "Expandir pasta",
-      icon: isExpanded ? (
-        <ChevronDown className="h-4 w-4 text-[#736d67]" />
-      ) : (
-        <ChevronRight className="h-4 w-4 text-[#736d67]" />
-      ),
-      onSelect: () => onToggleFolder(folder.id),
-    },
-    {
-      id: "qr",
-      label: "Gerar QR Code da pasta",
-      icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
-      onSelect: () => onOpenQrFolder(folder),
-    },
-    ...(isAdmin
-      ? [
-          {
-            id: "new-subfolder",
-            label: "Nova subpasta",
-            icon: <FolderPlus className="h-4 w-4 text-[#736d67]" />,
-            separatorBefore: true,
-            onSelect: () => onNewSubfolder(folder),
-          },
-          {
-            id: "upload",
-            label: "Enviar arquivo para esta pasta",
-            icon: <UploadCloud className="h-4 w-4 text-[#736d67]" />,
-            onSelect: () => onUploadToFolder(folder),
-          },
-          {
-            id: "rename",
-            label: "Editar pasta",
-            icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
-            separatorBefore: true,
-            onSelect: () => onEditFolder(folder),
-          },
-          {
-            id: "delete",
-            label: "Excluir pasta",
-            icon: <Trash2 className="h-4 w-4" />,
-            destructive: true,
-            onSelect: () => onDeleteFolder(folder),
-          },
-        ]
-      : []),
-  ];
+  const folderContextMenuItems = buildFolderMenuItems(folder, {
+    isExpanded,
+    onToggle: () => onToggleFolder(folder.id),
+  });
 
   return (
     <div className="select-none">
@@ -247,13 +205,7 @@ function SidebarFolderNode({
             </button>
 
             {isExpanded ? (
-              <FolderOpen
-                className={`h-3.5 w-3.5 shrink-0 ${
-                  isActive
-                    ? "text-[#c96726] dark:text-[#d77435]"
-                    : "text-[#c96726] dark:text-[#d77435]"
-                }`}
-              />
+              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-[#c96726] dark:text-[#d77435]" />
             ) : (
               <FolderIcon
                 className={`h-3.5 w-3.5 shrink-0 ${
@@ -293,19 +245,11 @@ function SidebarFolderNode({
               activeFolderId={activeFolderId}
               selectedFileId={selectedFileId}
               expandedFolders={expandedFolders}
-              isAdmin={isAdmin}
               onToggleFolder={onToggleFolder}
               onSelectFolder={onSelectFolder}
               onSelectFile={onSelectFile}
-              onOpenQrFolder={onOpenQrFolder}
-              onNewSubfolder={onNewSubfolder}
-              onUploadToFolder={onUploadToFolder}
-              onEditFolder={onEditFolder}
-              onDeleteFolder={onDeleteFolder}
-              onOpenQrFile={onOpenQrFile}
-              onDownloadFile={onDownloadFile}
-              onCopyFileLink={onCopyFileLink}
-              onDeleteFile={onDeleteFile}
+              buildFolderMenuItems={buildFolderMenuItems}
+              buildFileMenuItems={buildFileMenuItems}
               depth={depth + 1}
             />
           ))}
@@ -313,44 +257,7 @@ function SidebarFolderNode({
           {/* Arquivos dentro desta pasta aberta com Menu de Clique Direito */}
           {folderFiles.map((file) => {
             const isFileActive = selectedFileId === file.id;
-            const fileContextMenuItems: ContextMenuItem[] = [
-              {
-                id: "open",
-                label: "Visualizar documento",
-                icon: <FileText className="h-4 w-4 text-[#c96726]" />,
-                onSelect: () => onSelectFile(file),
-              },
-              {
-                id: "download",
-                label: "Baixar arquivo",
-                icon: <Download className="h-4 w-4 text-[#736d67]" />,
-                onSelect: () => onDownloadFile(file),
-              },
-              {
-                id: "qr",
-                label: "Gerar QR Code do arquivo",
-                icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
-                onSelect: () => onOpenQrFile(file),
-              },
-              {
-                id: "copy-link",
-                label: "Copiar link do arquivo",
-                icon: <Copy className="h-4 w-4 text-[#736d67]" />,
-                onSelect: () => onCopyFileLink(file),
-              },
-              ...(isAdmin
-                ? [
-                    {
-                      id: "delete",
-                      label: "Excluir arquivo",
-                      icon: <Trash2 className="h-4 w-4" />,
-                      destructive: true,
-                      separatorBefore: true,
-                      onSelect: () => onDeleteFile(file),
-                    },
-                  ]
-                : []),
-            ];
+            const fileContextMenuItems = buildFileMenuItems(file);
 
             return (
               <ContextMenu key={file.id} items={fileContextMenuItems}>
@@ -367,10 +274,17 @@ function SidebarFolderNode({
                   title={`${file.name} (${formatBytes(file.size)})`}
                 >
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <FileCategoryIcon category={file.category} className="h-3.5 w-3.5 shrink-0" />
+                    <FileCategoryIcon
+                      category={file.category}
+                      extension={file.extension}
+                      className="h-3.5 w-3.5 shrink-0"
+                    />
                     <span className="truncate">{file.name}</span>
                   </div>
                   <div className="flex shrink-0 items-center gap-1 pl-1.5">
+                    {file.pinned && (
+                      <Pin className="h-2.5 w-2.5 text-[#c96726] dark:text-[#d77435]" />
+                    )}
                     {isFileActive ? (
                       <span
                         className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
@@ -461,11 +375,17 @@ export default function ShowcaseApp({
   });
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | "docs" | "slides" | "code" | "media"
+  >("all");
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "size">("recent");
+  const [zippingFolderId, setZippingFolderId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Modais
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrScope, setQrScope] = useState<"all" | "semester" | "folder" | "file">("all");
   const [pinOpen, setPinOpen] = useState(false);
@@ -473,6 +393,11 @@ export default function ShowcaseApp({
   const [editingSemester, setEditingSemester] = useState<Semester | null>(null);
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [fileActionModal, setFileActionModal] = useState<{
+    open: boolean;
+    mode: FileActionMode;
+    file: FileItem | null;
+  }>({ open: false, mode: "rename", file: null });
 
   // Popup de confirmação customizado (substitui window.confirm e alert)
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
@@ -680,6 +605,67 @@ export default function ShowcaseApp({
     setFolderModalOpen(true);
   };
 
+  const handleDownloadFolderZip = async (folder: Folder) => {
+    if (zippingFolderId) return;
+    setZippingFolderId(folder.id);
+    try {
+      const count = await downloadFolderAsZip(folder, folders, files);
+      if (count === 0) {
+        showAlert(
+          "Pasta vazia",
+          `A pasta "${folder.name}" não possui arquivos para compactar em .zip.`,
+          "info"
+        );
+      }
+    } catch {
+      showAlert(
+        "Erro ao compactar",
+        "Não foi possível gerar o pacote .zip desta pasta.",
+        "warning"
+      );
+    } finally {
+      setZippingFolderId(null);
+    }
+  };
+
+  const handleTogglePinFile = async (file: FileItem) => {
+    try {
+      const res = await fetch(`/api/files/${file.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned: !file.pinned }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { file?: FileItem };
+        if (data.file) {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === data.file!.id ? data.file! : f))
+          );
+        }
+      }
+    } catch {
+      // ignore transient network errors
+    }
+  };
+
+  // Atalho global Ctrl+K / ⌘K para Command Palette
+  useEffect(() => {
+    const onGlobalKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onGlobalKey);
+    return () => window.removeEventListener("keydown", onGlobalKey);
+  }, []);
+
+  // Limpa filtro de categoria ao trocar de pasta/semestre
+  useEffect(() => {
+    setCategoryFilter("all");
+    setSearch("");
+  }, [activeSemesterId, activeFolderId]);
+
   const activeSemester = useMemo(
     () => semesters.find((s) => s.id === activeSemesterId) || null,
     [semesters, activeSemesterId]
@@ -710,16 +696,54 @@ export default function ShowcaseApp({
     });
   }, [files, activeSemesterId, activeFolderId]);
 
-  // Arquivos filtrados pela busca
+  // Arquivos filtrados por busca, categoria e ordenados (fixados no topo)
   const filteredFiles = useMemo(() => {
-    if (!search.trim()) return currentLevelFiles;
-    const q = search.toLowerCase();
-    return currentLevelFiles.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q) ||
-        f.extension.toLowerCase().includes(q)
-    );
-  }, [currentLevelFiles, search]);
+    const q = search.trim().toLowerCase();
+    const filtered = currentLevelFiles.filter((f) => {
+      if (
+        q &&
+        !f.name.toLowerCase().includes(q) &&
+        !f.extension.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
+      if (categoryFilter === "docs") {
+        return f.category === "pdf" || f.category === "docx";
+      }
+      if (categoryFilter === "slides") {
+        return f.category === "pptx";
+      }
+      if (categoryFilter === "code") {
+        return (
+          f.category === "text" ||
+          f.extension.toLowerCase() === "zip"
+        );
+      }
+      if (categoryFilter === "media") {
+        return (
+          f.category === "image" ||
+          f.category === "video" ||
+          f.category === "audio"
+        );
+      }
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      const pinDiff = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      if (pinDiff !== 0) return pinDiff;
+
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name, "pt-BR", { numeric: true });
+      }
+      if (sortBy === "size") {
+        return b.size - a.size;
+      }
+      return (
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    });
+  }, [currentLevelFiles, search, categoryFilter, sortBy]);
 
   // Sugestões para o Arc ExpandingSearch
   const searchItems: ExpandingSearchItem[] = useMemo(() => {
@@ -1022,6 +1046,148 @@ export default function ShowcaseApp({
     }
   };
 
+  // Builders compartilhados para menus de contexto e dropdown (sidebar, cards e lista)
+  const buildFolderMenuItems = (
+    fld: Folder,
+    opts?: { isExpanded?: boolean; onToggle?: () => void }
+  ): ContextMenuItem[] => [
+    {
+      id: "open",
+      label: "Abrir pasta",
+      icon: <FolderOpen className="h-4 w-4 text-[#c96726]" />,
+      onSelect: () => handleSidebarSelectFolder(fld),
+    },
+    ...(opts?.onToggle
+      ? [
+          {
+            id: "toggle",
+            label: opts.isExpanded ? "Recolher pasta" : "Expandir pasta",
+            icon: opts.isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-[#736d67]" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-[#736d67]" />
+            ),
+            onSelect: opts.onToggle,
+          },
+        ]
+      : []),
+    {
+      id: "download-zip",
+      label:
+        zippingFolderId === fld.id ? "Compactando .zip..." : "Baixar pasta (.zip)",
+      icon: <Archive className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
+      disabled: zippingFolderId === fld.id,
+      onSelect: () => {
+        void handleDownloadFolderZip(fld);
+      },
+    },
+    {
+      id: "qr",
+      label: "Gerar QR Code da pasta",
+      icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
+      onSelect: () => handleOpenQrFolder(fld),
+    },
+    ...(isAdmin
+      ? [
+          {
+            id: "new-subfolder",
+            label: "Nova subpasta",
+            icon: <FolderPlus className="h-4 w-4 text-[#736d67]" />,
+            separatorBefore: true,
+            onSelect: () => handleNewSubfolder(fld),
+          },
+          {
+            id: "upload",
+            label: "Enviar arquivo para esta pasta",
+            icon: <UploadCloud className="h-4 w-4 text-[#736d67]" />,
+            onSelect: () => handleUploadToFolder(fld),
+          },
+          {
+            id: "edit",
+            label: "Editar pasta & Ficha Técnica",
+            icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
+            separatorBefore: true,
+            onSelect: () => handleEditFolder(fld),
+          },
+          {
+            id: "delete",
+            label: "Excluir pasta",
+            icon: <Trash2 className="h-4 w-4" />,
+            destructive: true,
+            onSelect: () =>
+              handleDeleteFolder({ stopPropagation: () => {} } as React.MouseEvent, fld),
+          },
+        ]
+      : []),
+  ];
+
+  const buildFileMenuItems = (file: FileItem): ContextMenuItem[] => [
+    {
+      id: "view",
+      label: "Visualizar documento",
+      icon: <FileCategoryIcon category={file.category} extension={file.extension} className="h-4 w-4" />,
+      onSelect: () => handleSidebarSelectFile(file),
+    },
+    {
+      id: "download",
+      label: "Baixar arquivo",
+      icon: <Download className="h-4 w-4 text-sky-500" />,
+      onSelect: () => handleDownloadFile(file),
+    },
+    {
+      id: "qr",
+      label: "Gerar QR Code",
+      icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
+      onSelect: () => handleOpenQrFile(file),
+    },
+    {
+      id: "copy-link",
+      label: "Copiar link do arquivo",
+      icon: <Copy className="h-4 w-4 text-[#736d67]" />,
+      onSelect: () => handleCopyFileLink(file),
+    },
+    ...(isAdmin
+      ? [
+          {
+            id: "pin",
+            label: file.pinned ? "Desafixar do topo" : "Fixar no topo",
+            icon: file.pinned ? (
+              <PinOff className="h-4 w-4 text-[#736d67]" />
+            ) : (
+              <Pin className="h-4 w-4 text-[#c96726]" />
+            ),
+            separatorBefore: true,
+            onSelect: () => {
+              void handleTogglePinFile(file);
+            },
+          },
+          {
+            id: "rename",
+            label: "Renomear arquivo",
+            icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
+            onSelect: () =>
+              setFileActionModal({ open: true, mode: "rename", file }),
+          },
+          {
+            id: "move",
+            label: "Mover para pasta...",
+            icon: <FolderInput className="h-4 w-4 text-[#736d67]" />,
+            onSelect: () =>
+              setFileActionModal({ open: true, mode: "move", file }),
+          },
+          {
+            id: "delete",
+            label: "Excluir arquivo",
+            icon: <Trash2 className="h-4 w-4" />,
+            destructive: true,
+            separatorBefore: true,
+            onSelect: () =>
+              handleDeleteFile({ stopPropagation: () => {} } as React.MouseEvent, file),
+          },
+        ]
+      : []),
+  ];
+
   // Drag and drop global
   const onDragEnter = (e: React.DragEvent) => {
     if (!isAdmin || !e.dataTransfer.types.includes("Files")) return;
@@ -1097,6 +1263,7 @@ export default function ShowcaseApp({
         lockedLabel={lockedScopeLabel}
         isAdmin={isAdmin}
         onUnlockAllScope={() => setIsLockedScope(false)}
+        onOpenGlobalSearch={() => setPaletteOpen(true)}
         onOpenQr={() => {
           setQrScope(
             selectedFile
@@ -1369,29 +1536,11 @@ export default function ShowcaseApp({
                                 activeFolderId={activeFolderId}
                                 selectedFileId={selectedFileId}
                                 expandedFolders={expandedFolders}
-                                isAdmin={isAdmin}
                                 onToggleFolder={toggleFolderExpansion}
                                 onSelectFolder={handleSidebarSelectFolder}
                                 onSelectFile={handleSidebarSelectFile}
-                                onOpenQrFolder={handleOpenQrFolder}
-                                onNewSubfolder={handleNewSubfolder}
-                                onUploadToFolder={handleUploadToFolder}
-                                onEditFolder={handleEditFolder}
-                                onDeleteFolder={(folderToDelete) => {
-                                  handleDeleteFolder(
-                                    { stopPropagation: () => {} } as React.MouseEvent,
-                                    folderToDelete
-                                  );
-                                }}
-                                onOpenQrFile={handleOpenQrFile}
-                                onDownloadFile={handleDownloadFile}
-                                onCopyFileLink={handleCopyFileLink}
-                                onDeleteFile={(fileToDelete) => {
-                                  handleDeleteFile(
-                                    { stopPropagation: () => {} } as React.MouseEvent,
-                                    fileToDelete
-                                  );
-                                }}
+                                buildFolderMenuItems={buildFolderMenuItems}
+                                buildFileMenuItems={buildFileMenuItems}
                                 depth={0}
                               />
                             ))}
@@ -1399,48 +1548,7 @@ export default function ShowcaseApp({
                             {/* Arquivos na raiz do semestre com Menu de Clique Direito */}
                             {semRootFiles.map((file) => {
                               const isFileActive = selectedFileId === file.id;
-                              const rootFileContextMenuItems: ContextMenuItem[] = [
-                                {
-                                  id: "open",
-                                  label: "Visualizar documento",
-                                  icon: <FileText className="h-4 w-4 text-[#c96726]" />,
-                                  onSelect: () => handleSidebarSelectFile(file),
-                                },
-                                {
-                                  id: "download",
-                                  label: "Baixar arquivo",
-                                  icon: <Download className="h-4 w-4 text-[#736d67]" />,
-                                  onSelect: () => handleDownloadFile(file),
-                                },
-                                {
-                                  id: "qr",
-                                  label: "Gerar QR Code do arquivo",
-                                  icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
-                                  onSelect: () => handleOpenQrFile(file),
-                                },
-                                {
-                                  id: "copy-link",
-                                  label: "Copiar link do arquivo",
-                                  icon: <Copy className="h-4 w-4 text-[#736d67]" />,
-                                  onSelect: () => handleCopyFileLink(file),
-                                },
-                                ...(isAdmin
-                                  ? [
-                                      {
-                                        id: "delete",
-                                        label: "Excluir arquivo",
-                                        icon: <Trash2 className="h-4 w-4" />,
-                                        destructive: true,
-                                        separatorBefore: true,
-                                        onSelect: () =>
-                                          handleDeleteFile(
-                                            { stopPropagation: () => {} } as React.MouseEvent,
-                                            file
-                                          ),
-                                      },
-                                    ]
-                                  : []),
-                              ];
+                              const rootFileContextMenuItems = buildFileMenuItems(file);
 
                               return (
                                 <ContextMenu key={file.id} items={rootFileContextMenuItems}>
@@ -1459,11 +1567,15 @@ export default function ShowcaseApp({
                                     <div className="flex min-w-0 items-center gap-1.5">
                                       <FileCategoryIcon
                                         category={file.category}
+                                        extension={file.extension}
                                         className="h-3.5 w-3.5 shrink-0"
                                       />
                                       <span className="truncate">{file.name}</span>
                                     </div>
                                     <div className="flex shrink-0 items-center gap-1 pl-1.5">
+                                      {file.pinned && (
+                                        <Pin className="h-2.5 w-2.5 text-[#c96726] dark:text-[#d77435]" />
+                                      )}
                                       {isFileActive ? (
                                         <span
                                           className="inline-block h-1.5 w-1.5 rounded-full bg-[#c96726] dark:bg-[#d77435]"
@@ -1616,9 +1728,41 @@ export default function ShowcaseApp({
                     />
                   )}
 
+                  {/* Baixar Pasta Completa (.zip) */}
+                  {activeFolder && (currentLevelFiles.length > 0 || currentSubfolders.length > 0) && (
+                    <button
+                      type="button"
+                      disabled={zippingFolderId === activeFolder.id}
+                      onClick={() => void handleDownloadFolderZip(activeFolder)}
+                      className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white disabled:opacity-50 dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                      title="Compactar e baixar todos os arquivos desta pasta"
+                    >
+                      {zippingFolderId === activeFolder.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#c96726]" />
+                      ) : (
+                        <Archive className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {zippingFolderId === activeFolder.id ? "COMPACTANDO..." : "BAIXAR .ZIP"}
+                      </span>
+                    </button>
+                  )}
+
                   {/* Ações Administrativas */}
                   {isAdmin && (
                     <>
+                      {activeFolder && (
+                        <button
+                          type="button"
+                          onClick={() => handleEditFolder(activeFolder)}
+                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                          title="Editar nome ou Ficha Técnica (Integrantes, Links, Resumo)"
+                        >
+                          <Edit3 className="h-3.5 w-3.5 text-[#736d67] dark:text-[#9c968f]" />
+                          <span className="hidden md:inline">FICHA</span>
+                        </button>
+                      )}
+
                       {activeSemesterId && (
                         <button
                           type="button"
@@ -1843,6 +1987,72 @@ export default function ShowcaseApp({
               {/* NÍVEL 1+: Dentro de um Semestre ou Subpasta */}
               {activeSemesterId && (
                 <div className="space-y-6">
+                  {/* Ficha Técnica do Projeto Integrador (quando preenchida na pasta ativa) */}
+                  {activeFolder &&
+                    (activeFolder.description ||
+                      activeFolder.advisor ||
+                      (activeFolder.members && activeFolder.members.length > 0) ||
+                      (activeFolder.links && activeFolder.links.length > 0)) && (
+                      <div className="rounded-3xl border border-[#1a1614]/12 bg-white/85 p-5 sm:p-6 shadow-2xs backdrop-blur-xs antimetal-dots dark:border-white/10 dark:bg-[#201c19]/85">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#6d8352]/30 bg-[#6d8352]/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-[#55693e] dark:text-[#8ea573]">
+                              FICHA TÉCNICA · PROJETO INTEGRADOR
+                            </span>
+                            {activeFolder.description && (
+                              <p className="pt-1.5 max-w-3xl text-xs sm:text-sm leading-relaxed text-[#736d67] dark:text-[#d5cfc9]">
+                                {activeFolder.description}
+                              </p>
+                            )}
+                          </div>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditFolder(activeFolder)}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#1a1614]/15 bg-white px-3 py-1 font-mono text-[10px] font-medium text-[#1a1614] transition hover:border-[#c96726]/40 dark:border-white/15 dark:bg-[#161311] dark:text-[#fafbf7]"
+                            >
+                              <Edit3 className="h-3 w-3 text-[#c96726] dark:text-[#d77435]" />
+                              <span>EDITAR FICHA</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-dashed border-[#1a1614]/12 pt-3.5 dark:border-white/10">
+                          {activeFolder.advisor && (
+                            <div className="inline-flex items-center gap-1.5 rounded-xl border border-[#1a1614]/10 bg-[#f5f6f1] px-2.5 py-1 font-mono text-[11px] text-[#1a1614] dark:border-white/10 dark:bg-[#161311] dark:text-[#fafbf7]">
+                              <GraduationCap className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+                              <span className="text-[#736d67] dark:text-[#9c968f]">Orientador:</span>
+                              <span className="font-medium">{activeFolder.advisor}</span>
+                            </div>
+                          )}
+
+                          {activeFolder.members && activeFolder.members.length > 0 && (
+                            <div className="inline-flex flex-wrap items-center gap-1.5 rounded-xl border border-[#1a1614]/10 bg-[#f5f6f1] px-2.5 py-1 font-mono text-[11px] text-[#1a1614] dark:border-white/10 dark:bg-[#161311] dark:text-[#fafbf7]">
+                              <Users className="h-3.5 w-3.5 text-[#6d8352] dark:text-[#7f9564]" />
+                              <span className="text-[#736d67] dark:text-[#9c968f]">Grupo:</span>
+                              <span className="font-medium">
+                                {activeFolder.members.join(" · ")}
+                              </span>
+                            </div>
+                          )}
+
+                          {activeFolder.links &&
+                            activeFolder.links.map((lnk, lIdx) => (
+                              <a
+                                key={lIdx}
+                                href={lnk.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-full border border-[#c96726]/30 bg-[#c96726]/10 px-3 py-1 font-mono text-[11px] font-medium text-[#c96726] transition hover:bg-[#c96726]/18 dark:border-[#d77435]/30 dark:bg-[#d77435]/15 dark:text-[#d77435]"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                <span>{lnk.label}</span>
+                              </a>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
                   {/* Seção de Subpastas */}
                   {currentSubfolders.length > 0 && (
                     <div>
@@ -1854,47 +2064,7 @@ export default function ShowcaseApp({
                       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                         {currentSubfolders.map((fld) => {
                           const subFilesCount = files.filter((f) => f.folderId === fld.id).length;
-                          const folderMenuItems: ContextMenuItem[] = [
-                            {
-                              id: "open",
-                              label: "Abrir pasta",
-                              icon: <FolderOpen className="h-4 w-4 text-[#c96726]" />,
-                              onSelect: () => setActiveFolderId(fld.id),
-                            },
-                            {
-                              id: "qr",
-                              label: "Gerar QR Code da pasta",
-                              icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
-                              onSelect: () => {
-                                setActiveFolderId(fld.id);
-                                setQrScope("folder");
-                                setQrOpen(true);
-                              },
-                            },
-                            ...(isAdmin
-                              ? [
-                                  {
-                                    id: "edit",
-                                    label: "Renomear pasta",
-                                    icon: <Edit3 className="h-4 w-4 text-[#736d67]" />,
-                                    separatorBefore: true,
-                                    onSelect: () => {
-                                      setEditingFolder(fld);
-                                      setFolderModalOpen(true);
-                                    },
-                                  },
-                                  {
-                                    id: "delete",
-                                    label: "Excluir pasta",
-                                    icon: <Trash2 className="h-4 w-4" />,
-                                    destructive: true,
-                                    onSelect: () => {
-                                      handleDeleteFolder({ stopPropagation: () => {} } as React.MouseEvent, fld);
-                                    },
-                                  },
-                                ]
-                              : []),
-                          ];
+                          const folderMenuItems = buildFolderMenuItems(fld);
 
                           return (
                             <ContextMenu key={fld.id} items={folderMenuItems}>
@@ -1943,23 +2113,70 @@ export default function ShowcaseApp({
 
                   {/* Seção de Arquivos */}
                   <div>
-                    <div className="mb-3 flex items-center justify-between">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
-                        03 / DOCUMENTOS & ARQUIVOS ({filteredFiles.length})
+                        03 / DOCUMENTOS &amp; ARQUIVOS ({filteredFiles.length})
                       </span>
-                      {uploadingCount > 0 && (
-                        <span className="flex items-center gap-1.5 font-mono text-xs text-[#c96726] dark:text-[#d77435]">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ENVIANDO {uploadingCount}...
-                        </span>
-                      )}
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {currentLevelFiles.length > 0 && (
+                          <>
+                            <div className="flex flex-wrap items-center gap-1 rounded-full border border-[#1a1614]/10 bg-white/70 p-0.5 dark:border-white/10 dark:bg-[#201c19]/70">
+                              {(
+                                [
+                                  { id: "all", label: "Todos" },
+                                  { id: "docs", label: "Docs" },
+                                  { id: "slides", label: "Slides" },
+                                  { id: "code", label: "Código" },
+                                  { id: "media", label: "Mídia" },
+                                ] as const
+                              ).map((chip) => (
+                                <button
+                                  key={chip.id}
+                                  type="button"
+                                  onClick={() => setCategoryFilter(chip.id)}
+                                  className={`rounded-full px-2.5 py-1 font-mono text-[10px] font-medium transition ${
+                                    categoryFilter === chip.id
+                                      ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                                      : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+                                  }`}
+                                >
+                                  {chip.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            <select
+                              value={sortBy}
+                              onChange={(e) =>
+                                setSortBy(e.target.value as "recent" | "name" | "size")
+                              }
+                              aria-label="Ordenar arquivos"
+                              className="h-7.5 rounded-full border border-[#1a1614]/15 bg-white/80 px-2.5 font-mono text-[10px] font-medium text-[#1a1614] outline-none dark:border-white/15 dark:bg-[#201c19]/80 dark:text-[#fafbf7]"
+                            >
+                              <option value="recent">Mais recentes</option>
+                              <option value="name">Nome (A–Z)</option>
+                              <option value="size">Maior tamanho</option>
+                            </select>
+                          </>
+                        )}
+
+                        {uploadingCount > 0 && (
+                          <span className="flex items-center gap-1.5 font-mono text-xs text-[#c96726] dark:text-[#d77435]">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ENVIANDO {uploadingCount}...
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {filteredFiles.length === 0 ? (
                       <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-[#1a1614]/15 bg-white/60 p-12 text-center antimetal-dots dark:border-white/10 dark:bg-[#201c19]/60">
                         <FolderOpen className="h-10 w-10 text-[#736d67]/50 dark:text-[#9c968f]/50" />
                         <p className="mt-3 font-serif text-lg text-[#1a1614] dark:text-[#fafbf7]">
-                          {search ? "Nenhum arquivo corresponde à busca." : "Nenhum documento nesta pasta."}
+                          {search || categoryFilter !== "all"
+                            ? "Nenhum arquivo corresponde ao filtro atual."
+                            : "Nenhum documento nesta pasta."}
                         </p>
                         <p className="mt-1 max-w-sm font-mono text-xs text-[#736d67] dark:text-[#9c968f]">
                           Arraste arquivos PDF, imagens, DOCX ou PPTX diretamente para cá para começar.
@@ -1979,67 +2196,37 @@ export default function ShowcaseApp({
                       /* Grade de Arquivos com Preview de Documento */
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                         {filteredFiles.map((file) => {
-                          const fileMenuItems: ContextMenuItem[] = [
-                            {
-                              id: "view",
-                              label: "Abrir documento",
-                              icon: <FileCategoryIcon category={file.category} className="h-4 w-4" />,
-                              onSelect: () => setSelectedFileId(file.id),
-                            },
-                            {
-                              id: "download",
-                              label: "Baixar arquivo",
-                              icon: <Download className="h-4 w-4 text-sky-500" />,
-                              onSelect: () => {
-                                const a = document.createElement("a");
-                                a.href = file.url;
-                                a.download = file.name;
-                                a.target = "_blank";
-                                a.rel = "noopener noreferrer";
-                                a.click();
-                              },
-                            },
-                            {
-                              id: "qr",
-                              label: "Gerar QR Code",
-                              icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
-                              onSelect: () => {
-                                setSelectedFileId(file.id);
-                                setQrScope("file");
-                                setQrOpen(true);
-                              },
-                            },
-                            ...(isAdmin
-                              ? [
-                                  {
-                                    id: "delete",
-                                    label: "Excluir arquivo",
-                                    icon: <Trash2 className="h-4 w-4" />,
-                                    destructive: true,
-                                    separatorBefore: true,
-                                    onSelect: () => {
-                                      handleDeleteFile({ stopPropagation: () => {} } as React.MouseEvent, file);
-                                    },
-                                  },
-                                ]
-                              : []),
-                          ];
+                          const fileMenuItems = buildFileMenuItems(file);
 
                           return (
                             <ContextMenu key={file.id} items={fileMenuItems}>
                               <div
                                 onClick={() => setSelectedFileId(file.id)}
-                                className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-[#1a1614]/10 bg-white/90 p-3.5 shadow-2xs backdrop-blur-xs transition-all hover:-translate-y-0.5 hover:border-[#c96726]/40 hover:shadow-md dark:border-white/10 dark:bg-[#201c19]/90 dark:hover:border-[#d77435]/40"
+                                className={`group relative flex cursor-pointer flex-col justify-between rounded-2xl border bg-white/90 p-3.5 shadow-2xs backdrop-blur-xs transition-all hover:-translate-y-0.5 hover:border-[#c96726]/40 hover:shadow-md dark:bg-[#201c19]/90 dark:hover:border-[#d77435]/40 ${
+                                  file.pinned
+                                    ? "border-[#c96726]/40 dark:border-[#d77435]/40"
+                                    : "border-[#1a1614]/10 dark:border-white/10"
+                                }`}
                               >
                                 <div>
                                   {/* Preview do Documento no Card */}
                                   <div className="relative mb-3 h-36 sm:h-40 w-full overflow-hidden rounded-xl border border-[#1a1614]/8 bg-[#f5f6f1] dark:border-white/8 dark:bg-[#161311]">
                                     <DocumentPreview file={file} />
 
-                                    {/* Badge com a extensão */}
-                                    <span className="absolute left-2.5 top-2.5 rounded-md bg-[#1a1614] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[#fafbf7] shadow-xs dark:bg-[#fafbf7] dark:text-[#1a1614]">
-                                      {file.extension.toUpperCase() || "ARQ"}
-                                    </span>
+                                    {/* Badge com a extensão + Fixado */}
+                                    <div className="absolute left-2.5 top-2.5 flex items-center gap-1">
+                                      <span className="rounded-md bg-[#1a1614] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[#fafbf7] shadow-xs dark:bg-[#fafbf7] dark:text-[#1a1614]">
+                                        {file.extension.toUpperCase() || "ARQ"}
+                                      </span>
+                                      {file.pinned && (
+                                        <span
+                                          className="inline-flex items-center gap-0.5 rounded-md bg-[#c96726] px-1.5 py-0.5 font-mono text-[9px] font-bold text-white shadow-xs dark:bg-[#d77435]"
+                                          title="Arquivo fixado no topo"
+                                        >
+                                          <Pin className="h-2.5 w-2.5" />
+                                        </span>
+                                      )}
+                                    </div>
 
                                     {/* Ações no hover / mobile */}
                                     <div
@@ -2082,7 +2269,11 @@ export default function ShowcaseApp({
                                   </div>
 
                                   <div className="flex items-center gap-2">
-                                    <FileCategoryIcon category={file.category} className="h-4 w-4 shrink-0" />
+                                    <FileCategoryIcon
+                                      category={file.category}
+                                      extension={file.extension}
+                                      className="h-4 w-4 shrink-0"
+                                    />
                                     <p className="truncate font-sans text-xs sm:text-sm font-medium text-[#1a1614] dark:text-[#fafbf7]" title={file.name}>
                                       {file.name}
                                     </p>
@@ -2104,51 +2295,7 @@ export default function ShowcaseApp({
                       /* Lista de Arquivos */
                       <div className="divide-y divide-[#1a1614]/8 overflow-hidden rounded-2xl border border-[#1a1614]/10 bg-white/90 shadow-2xs dark:divide-white/8 dark:border-white/10 dark:bg-[#201c19]/90">
                         {filteredFiles.map((file) => {
-                          const fileMenuItems: ContextMenuItem[] = [
-                            {
-                              id: "view",
-                              label: "Abrir documento",
-                              icon: <FileCategoryIcon category={file.category} className="h-4 w-4" />,
-                              onSelect: () => setSelectedFileId(file.id),
-                            },
-                            {
-                              id: "download",
-                              label: "Baixar arquivo",
-                              icon: <Download className="h-4 w-4 text-sky-500" />,
-                              onSelect: () => {
-                                const a = document.createElement("a");
-                                a.href = file.url;
-                                a.download = file.name;
-                                a.target = "_blank";
-                                a.rel = "noopener noreferrer";
-                                a.click();
-                              },
-                            },
-                            {
-                              id: "qr",
-                              label: "Gerar QR Code",
-                              icon: <QrCode className="h-4 w-4 text-[#736d67]" />,
-                              onSelect: () => {
-                                setSelectedFileId(file.id);
-                                setQrScope("file");
-                                setQrOpen(true);
-                              },
-                            },
-                            ...(isAdmin
-                              ? [
-                                  {
-                                    id: "delete",
-                                    label: "Excluir arquivo",
-                                    icon: <Trash2 className="h-4 w-4" />,
-                                    destructive: true,
-                                    separatorBefore: true,
-                                    onSelect: () => {
-                                      handleDeleteFile({ stopPropagation: () => {} } as React.MouseEvent, file);
-                                    },
-                                  },
-                                ]
-                              : []),
-                          ];
+                          const fileMenuItems = buildFileMenuItems(file);
 
                           return (
                             <ContextMenu key={file.id} items={fileMenuItems}>
@@ -2157,10 +2304,16 @@ export default function ShowcaseApp({
                                 className="group flex cursor-pointer items-center justify-between p-3 text-xs transition hover:bg-[#1a1614]/3 dark:hover:bg-white/3"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <FileCategoryIcon category={file.category} />
+                                  <FileCategoryIcon
+                                    category={file.category}
+                                    extension={file.extension}
+                                  />
                                   <div className="min-w-0">
-                                    <p className="truncate font-sans font-medium text-[#1a1614] dark:text-[#fafbf7]">
-                                      {file.name}
+                                    <p className="flex items-center gap-1.5 truncate font-sans font-medium text-[#1a1614] dark:text-[#fafbf7]">
+                                      {file.pinned && (
+                                        <Pin className="h-3 w-3 shrink-0 text-[#c96726] dark:text-[#d77435]" />
+                                      )}
+                                      <span className="truncate">{file.name}</span>
                                     </p>
                                     <p className="font-mono text-[10px] text-[#736d67] dark:text-[#9c968f]">
                                       {file.extension.toUpperCase()} · {formatBytes(file.size)}
@@ -2290,6 +2443,33 @@ export default function ShowcaseApp({
             );
           }
         }}
+      />
+
+      <FileActionsModal
+        open={fileActionModal.open}
+        mode={fileActionModal.mode}
+        file={fileActionModal.file}
+        semesters={semesters}
+        folders={folders}
+        onClose={() =>
+          setFileActionModal((prev) => ({ ...prev, open: false }))
+        }
+        onUpdated={(updated) => {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === updated.id ? updated : f))
+          );
+        }}
+      />
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        semesters={semesters}
+        folders={folders}
+        files={files}
+        onSelectSemester={(semId) => handleSidebarSelectSemester(semId)}
+        onSelectFolder={(fld) => handleSidebarSelectFolder(fld)}
+        onSelectFile={(file) => handleSidebarSelectFile(file)}
       />
     </div>
   );

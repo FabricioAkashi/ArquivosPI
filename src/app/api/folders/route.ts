@@ -7,6 +7,7 @@ import {
   WRITE_RATE_LIMIT,
 } from "@/lib/rate-limit";
 import { createFolder } from "@/lib/storage";
+import { ProjectLink } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   const rl = consumeRateLimit(
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest) {
       semesterId?: string;
       parentId?: string | null;
       name?: string;
+      description?: string;
+      members?: string[];
+      advisor?: string;
+      links?: ProjectLink[];
     };
 
     const name = body.name?.trim();
@@ -44,6 +49,10 @@ export async function POST(req: NextRequest) {
       semesterId: body.semesterId,
       parentId: body.parentId || null,
       name,
+      description: body.description,
+      members: body.members,
+      advisor: body.advisor,
+      links: body.links,
     });
 
     return NextResponse.json({ folder }, { status: 201 });

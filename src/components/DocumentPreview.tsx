@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import {
+  FileArchive,
   FileCode2,
   FileSpreadsheet,
   FileText,
@@ -292,12 +293,21 @@ export default function DocumentPreview({ file, className = "h-full w-full" }: D
       {file.category === "video" && <VideoThumbnail file={file} />}
       {file.category === "audio" && <AudioThumbnail file={file} />}
       {file.category === "text" && <CodeThumbnail file={file} />}
-      {file.category === "other" && (
-        <div className="flex h-full w-full flex-col items-center justify-center bg-neutral-100 text-neutral-400 dark:bg-neutral-800">
-          <FileText className="h-8 w-8" />
-          <span className="mt-1 text-[10px] font-mono uppercase">{file.extension}</span>
-        </div>
-      )}
+      {file.category === "other" &&
+        (file.extension.toLowerCase() === "zip" ||
+        file.mimeType.toLowerCase().includes("zip") ? (
+          <div className="flex h-full w-full flex-col items-center justify-center bg-[#f5f6f1] text-[#c96726] dark:bg-[#1a1614] dark:text-[#d77435]">
+            <FileArchive className="h-8 w-8" />
+            <span className="mt-1 rounded bg-[#c96726]/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase">
+              ZIP ARCHIVE
+            </span>
+          </div>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center bg-neutral-100 text-neutral-400 dark:bg-neutral-800">
+            <FileText className="h-8 w-8" />
+            <span className="mt-1 text-[10px] font-mono uppercase">{file.extension}</span>
+          </div>
+        ))}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { put, del, get } from "@vercel/blob";
-import { Database, FileItem, Folder, Semester } from "./types";
+import { Database, FileItem, Folder, ProjectLink, Semester } from "./types";
 import { getExtension, getFileCategory, getMimeFromExtension, slugify } from "./file-utils";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -223,10 +223,37 @@ export async function deleteSemester(id: string): Promise<boolean> {
   });
 }
 
+function sanitizeProjectLinks(links?: ProjectLink[]): ProjectLink[] | undefined {
+  if (!Array.isArray(links)) return undefined;
+  const cleaned = links
+    .map((item) => ({
+      label: typeof item?.label === "string" ? item.label.trim() : "",
+      url: typeof item?.url === "string" ? item.url.trim() : "",
+    }))
+    .filter(
+      (item) =>
+        item.label.length > 0 &&
+        (item.url.startsWith("https://") || item.url.startsWith("http://"))
+    );
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+function sanitizeMembers(members?: string[]): string[] | undefined {
+  if (!Array.isArray(members)) return undefined;
+  const cleaned = members
+    .map((m) => (typeof m === "string" ? m.trim() : ""))
+    .filter(Boolean);
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
 export async function createFolder(input: {
   semesterId: string;
   parentId?: string | null;
   name: string;
+  description?: string;
+  members?: string[];
+  advisor?: string;
+  links?: ProjectLink[];
 }): Promise<Folder> {
   return withDbLock(async () => {
     const db = await readDb();
@@ -240,6 +267,10 @@ export async function createFolder(input: {
       semesterId: input.semesterId,
       parentId: input.parentId || null,
       name: input.name.trim(),
+      description: input.description?.trim() || undefined,
+      members: sanitizeMembers(input.members),
+      advisor: input.advisor?.trim() || undefined,
+      links: sanitizeProjectLinks(input.links),
       createdAt: new Date().toISOString(),
     };
 
@@ -254,7 +285,13 @@ export async function createFolder(input: {
 
 export async function updateFolder(
   id: string,
-  updates: { name: string }
+  updates: {
+    name?: string;
+    description?: string;
+    members?: string[];
+    advisor?: string;
+    links?: ProjectLink[];
+  }
 ): Promise<Folder | null> {
   return withDbLock(async () => {
     const db = await readDb();
@@ -266,7 +303,26 @@ export async function updateFolder(
     const current = db.folders[idx];
     const updated: Folder = {
       ...current,
-      name: updates.name.trim() || current.name,
+      name:
+        updates.name !== undefined
+          ? updates.name.trim() || current.name
+          : current.name,
+      description:
+        updates.description !== undefined
+          ? updates.description.trim() || undefined
+          : current.description,
+      members:
+        updates.members !== undefined
+          ? sanitizeMembers(updates.members)
+          : current.members,
+      advisor:
+        updates.advisor !== undefined
+          ? updates.advisor.trim() || undefined
+          : current.advisor,
+      links:
+        updates.links !== undefined
+          ? sanitizeProjectLinks(updates.links)
+          : current.links,
     };
 
     db.folders[idx] = updated;
@@ -404,6 +460,76 @@ export async function registerCloudFileRecord(params: {
 
 export async function getCloudFileStream(storageKey: string) {
   return withBlobAccessRetry((access) => get(storageKey, { access }));
+}
+
+export async function updateFileRecord(
+  fileId: string,
+  updates: {
+    name?: string;
+    semesterId?: string;
+    folderId?: string | null;
+    pinned?: boolean;
+  }
+): Promise<FileItem | null> {
+  return withDbLock(async () => {
+    const db = await readDb();
+    const idx = db.files.findIndex((f) => f.id === fileId);
+    if (idx === -1) return null;
+
+    const current = db.files[idx];
+    const nextSemesterId =
+      updates.semesterId !== undefined ? updates.semesterId : current.semesterId;
+
+    if (!db.semesters.some((s) => s.id === nextSemesterId)) {
+      throw new Error("Semestre de destino não encontrado.");
+    }
+
+    const nextFolderId =
+      updates.folderId !== undefined
+        ? updates.folderId || null
+        : current.folderId ?? null;
+
+    if (nextFolderId) {
+      const targetFolder = (db.folders || []).find((f) => f.id === nextFolderId);
+      if (!targetFolder || targetFolder.semesterId !== nextSemesterId) {
+        throw new Error("Pasta de destino inválida para este semestre.");
+      }
+    }
+
+    const nextName =
+      updates.name !== undefined && updates.name.trim()
+        ? updates.name.trim()
+        : current.name;
+
+    const nextExtension =
+      nextName !== current.name ? getExtension(nextName) : current.extension;
+    const nextMimeType =
+      nextName !== current.name
+        ? getMimeFromExtension(nextExtension) !== "application/octet-stream"
+          ? getMimeFromExtension(nextExtension)
+          : current.mimeType
+        : current.mimeType;
+    const nextCategory =
+      nextName !== current.name
+        ? getFileCategory(nextName, nextMimeType)
+        : current.category;
+
+    const updated: FileItem = {
+      ...current,
+      name: nextName,
+      extension: nextExtension,
+      mimeType: nextMimeType,
+      category: nextCategory,
+      semesterId: nextSemesterId,
+      folderId: nextFolderId,
+      pinned:
+        updates.pinned !== undefined ? Boolean(updates.pinned) : current.pinned,
+    };
+
+    db.files[idx] = updated;
+    await writeDb(db);
+    return updated;
+  });
 }
 
 export async function deleteFileRecord(fileId: string): Promise<boolean> {

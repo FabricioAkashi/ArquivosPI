@@ -14,6 +14,7 @@ import {
   getCloudFileStream,
   getFileById,
   resolveLocalUploadPath,
+  updateFileRecord,
 } from "@/lib/storage";
 
 function buildSafeFileHeaders(params: {
@@ -219,5 +220,57 @@ export async function DELETE(
       { error: "Erro ao excluir arquivo." },
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const rl = consumeRateLimit(
+    `write:${getClientIp(req)}`,
+    WRITE_RATE_LIMIT.limit,
+    WRITE_RATE_LIMIT.windowMs
+  );
+  if (!rl.allowed) {
+    return rateLimitErrorResponse(rl);
+  }
+
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json(
+      { error: "Modo de edição bloqueado." },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const { id } = await context.params;
+    const body = (await req.json()) as {
+      name?: string;
+      semesterId?: string;
+      folderId?: string | null;
+      pinned?: boolean;
+    };
+
+    if (body.name !== undefined && !body.name.trim()) {
+      return NextResponse.json(
+        { error: "O nome do arquivo não pode estar vazio." },
+        { status: 400 }
+      );
+    }
+
+    const updated = await updateFileRecord(id, body);
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Arquivo não encontrado." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ file: updated });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Erro ao atualizar arquivo.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

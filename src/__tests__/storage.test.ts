@@ -5,6 +5,8 @@ import {
   deleteFolder,
   deleteSemester,
   readDb,
+  saveLocalFileAndRecord,
+  updateFileRecord,
   updateFolder,
   updateSemester,
   writeDb,
@@ -157,6 +159,52 @@ describe("storage", () => {
       const db = await readDb();
       expect(db.folders?.some((f) => f.id === parent.id)).toBe(false);
       expect(db.folders?.some((f) => f.id === child.id)).toBe(false);
+    });
+
+    it("deve persistir ficha técnica e sanitizar links inválidos nas pastas", async () => {
+      const folder = await createFolder({
+        semesterId: "2026-2",
+        name: "Grupo 01",
+        advisor: "Prof. Silva",
+        members: ["Ana", "Bruno"],
+        description: "Sistema de monitoramento",
+        links: [
+          { label: "GitHub", url: "https://github.com/exemplo" },
+          { label: "Malicioso", url: "javascript:alert(1)" },
+        ],
+      });
+
+      expect(folder.advisor).toBe("Prof. Silva");
+      expect(folder.members).toEqual(["Ana", "Bruno"]);
+      expect(folder.links).toEqual([
+        { label: "GitHub", url: "https://github.com/exemplo" },
+      ]);
+    });
+  });
+
+  describe("Files CRUD (rename, move, pin)", () => {
+    it("deve renomear, mover entre pastas e fixar arquivo no topo", async () => {
+      const folderA = await createFolder({ semesterId: "2026-2", name: "Pasta A" });
+      const folderB = await createFolder({ semesterId: "2026-2", name: "Pasta B" });
+
+      const saved = await saveLocalFileAndRecord({
+        semesterId: "2026-2",
+        folderId: folderA.id,
+        name: "rascunho.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("conteudo"),
+      });
+
+      const updated = await updateFileRecord(saved.id, {
+        name: "final.md",
+        folderId: folderB.id,
+        pinned: true,
+      });
+
+      expect(updated?.name).toBe("final.md");
+      expect(updated?.extension).toBe("md");
+      expect(updated?.folderId).toBe(folderB.id);
+      expect(updated?.pinned).toBe(true);
     });
   });
 });

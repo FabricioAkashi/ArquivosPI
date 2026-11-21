@@ -7,6 +7,7 @@ import {
   WRITE_RATE_LIMIT,
 } from "@/lib/rate-limit";
 import { deleteFolder, updateFolder } from "@/lib/storage";
+import { ProjectLink } from "@/lib/types";
 
 export async function PATCH(
   req: NextRequest,
@@ -30,17 +31,29 @@ export async function PATCH(
 
   try {
     const { id } = await context.params;
-    const body = (await req.json()) as { name?: string };
+    const body = (await req.json()) as {
+      name?: string;
+      description?: string;
+      members?: string[];
+      advisor?: string;
+      links?: ProjectLink[];
+    };
 
     const name = body.name?.trim();
-    if (!name) {
+    if (body.name !== undefined && !name) {
       return NextResponse.json(
         { error: "Informe o novo nome da pasta." },
         { status: 400 }
       );
     }
 
-    const updated = await updateFolder(id, { name });
+    const updated = await updateFolder(id, {
+      name,
+      description: body.description,
+      members: body.members,
+      advisor: body.advisor,
+      links: body.links,
+    });
     if (!updated) {
       return NextResponse.json(
         { error: "Pasta não encontrada." },

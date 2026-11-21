@@ -10,6 +10,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   QrCode,
+  Search,
   ShieldCheck,
   Unlock,
   X,
@@ -40,6 +41,7 @@ export interface SiteHeaderProps {
   lockedLabel?: string;
   isAdmin: boolean;
   onUnlockAllScope?: () => void;
+  onOpenGlobalSearch?: () => void;
   onOpenQr: () => void;
   onToggleAdmin: () => void;
   themeToggle: React.ReactNode;
@@ -60,6 +62,7 @@ export default function SiteHeader({
   lockedLabel = "ACESSO RESTRITO",
   isAdmin,
   onUnlockAllScope,
+  onOpenGlobalSearch,
   onOpenQr,
   onToggleAdmin,
   themeToggle,
@@ -271,6 +274,21 @@ export default function SiteHeader({
         <div className="flex shrink-0 items-center gap-2">
           {/* Ações completas no Desktop */}
           <div className="hidden md:flex items-center gap-2">
+            {onOpenGlobalSearch && (
+              <button
+                type="button"
+                onClick={onOpenGlobalSearch}
+                className="inline-flex h-8.5 items-center gap-2 rounded-full border border-[#1a1614]/15 bg-white/70 px-3 font-mono text-xs font-medium text-[#736d67] shadow-2xs transition hover:bg-white hover:text-[#1a1614] active:scale-97 dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#9c968f] dark:hover:bg-[#201c19] dark:hover:text-[#fafbf7]"
+                title="Busca global no acervo (Ctrl+K)"
+              >
+                <Search className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+                <span>BUSCAR</span>
+                <kbd className="hidden lg:inline-block rounded bg-[#1a1614]/8 px-1.5 py-0.5 text-[9px] font-semibold text-[#736d67] dark:bg-white/10 dark:text-[#9c968f]">
+                  ⌘K
+                </kbd>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onOpenQr}
@@ -308,6 +326,22 @@ export default function SiteHeader({
               )}
             </button>
           </div>
+
+          {/* Botão rápido de Busca Global no Mobile */}
+          {onOpenGlobalSearch && (
+            <button
+              type="button"
+              onClick={() => {
+                closeMenu();
+                onOpenGlobalSearch();
+              }}
+              aria-label="Buscar no acervo"
+              title="Buscar no acervo"
+              className="inline-flex md:hidden h-9 w-9 items-center justify-center rounded-full border border-[#1a1614]/15 bg-white/75 text-[#1a1614] shadow-2xs transition active:scale-95 dark:border-white/15 dark:bg-[#201c19]/75 dark:text-[#fafbf7]"
+            >
+              <Search className="h-4 w-4 text-[#c96726] dark:text-[#d77435]" />
+            </button>
+          )}
 
           {/* Theme Toggle sempre acessível sem espremer */}
           {themeToggle}

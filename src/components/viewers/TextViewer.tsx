@@ -1,13 +1,24 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Loader2, Sparkles, WrapText } from "lucide-react";
+import {
+  Check,
+  Code2,
+  Copy,
+  Eye,
+  Loader2,
+  Sparkles,
+  Table2,
+  WrapText,
+} from "lucide-react";
 import {
   formatCodeWithPrettier,
   getCodeLanguageInfo,
   tokenizeCodeLines,
   TokenType,
 } from "@/lib/code-formatter";
+import MarkdownPreview from "./MarkdownPreview";
+import CsvTableViewer from "./CsvTableViewer";
 
 interface TextViewerProps {
   url: string;
@@ -35,6 +46,10 @@ export default function TextViewer({ url, name }: TextViewerProps) {
   const [usePrettier, setUsePrettier] = useState(true);
 
   const langInfo = useMemo(() => getCodeLanguageInfo(name), [name]);
+  const isMarkdown = langInfo.extension === "md" || langInfo.extension === "markdown";
+  const isCsv = langInfo.extension === "csv";
+
+  const [richMode, setRichMode] = useState<boolean>(isMarkdown || isCsv);
   const [wordWrap, setWordWrap] = useState<boolean>(() => !langInfo.isCode);
   const [loading, setLoading] = useState(true);
   const [formatting, setFormatting] = useState(false);
@@ -43,7 +58,8 @@ export default function TextViewer({ url, name }: TextViewerProps) {
 
   useEffect(() => {
     setWordWrap(!langInfo.isCode);
-  }, [langInfo.isCode]);
+    setRichMode(isMarkdown || isCsv);
+  }, [langInfo.isCode, isMarkdown, isCsv]);
 
   useEffect(() => {
     let active = true;
@@ -134,7 +150,37 @@ export default function TextViewer({ url, name }: TextViewerProps) {
             {tokenizedLines.length} {tokenizedLines.length === 1 ? "linha" : "linhas"}
           </span>
 
-          {langInfo.parser && (
+          {/* Toggle Preview Renderizado vs Código para Markdown e CSV */}
+          {(isMarkdown || isCsv) && (
+            <div className="inline-flex rounded-full border border-[#1a1614]/15 bg-[#f5f6f1] p-0.5 dark:border-white/15 dark:bg-[#161311]">
+              <button
+                type="button"
+                onClick={() => setRichMode(true)}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-medium transition ${
+                  richMode
+                    ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                    : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+                }`}
+              >
+                {isCsv ? <Table2 className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
+                <span>{isCsv ? "TABELA" : "PREVIEW"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRichMode(false)}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-medium transition ${
+                  !richMode
+                    ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                    : "text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+                }`}
+              >
+                <Code2 className="h-2.5 w-2.5" />
+                <span>{isCsv ? "BRUTO" : "CÓDIGO"}</span>
+              </button>
+            </div>
+          )}
+
+          {langInfo.parser && !(isMarkdown && richMode) && (
             <>
               <span className="text-[#1a1614]/20 dark:text-white/20">·</span>
               {formatting ? (
@@ -173,19 +219,21 @@ export default function TextViewer({ url, name }: TextViewerProps) {
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setWordWrap((w) => !w)}
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium transition ${
-              wordWrap
-                ? "border-[#1a1614]/20 bg-[#1a1614] text-[#fafbf7] dark:border-white/20 dark:bg-[#fafbf7] dark:text-[#1a1614]"
-                : "border-[#1a1614]/15 bg-white/80 text-[#736d67] hover:text-[#1a1614] dark:border-white/15 dark:bg-[#161311]/80 dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
-            }`}
-            title="Alternar quebra automática de linha"
-          >
-            <WrapText className="h-3 w-3" />
-            <span className="hidden sm:inline">QUEBRA</span>
-          </button>
+          {!richMode && (
+            <button
+              type="button"
+              onClick={() => setWordWrap((w) => !w)}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium transition ${
+                wordWrap
+                  ? "border-[#1a1614]/20 bg-[#1a1614] text-[#fafbf7] dark:border-white/20 dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                  : "border-[#1a1614]/15 bg-white/80 text-[#736d67] hover:text-[#1a1614] dark:border-white/15 dark:bg-[#161311]/80 dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+              }`}
+              title="Alternar quebra automática de linha"
+            >
+              <WrapText className="h-3 w-3" />
+              <span className="hidden sm:inline">QUEBRA</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -207,58 +255,64 @@ export default function TextViewer({ url, name }: TextViewerProps) {
         </div>
       </div>
 
-      {/* Área do Código com Números de Linha e Realce de Sintaxe */}
+      {/* Área Principal: Markdown Preview, Tabela CSV, ou Código Prettier */}
       <div className="flex-1 overflow-auto p-3 sm:p-6">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-[#1a1614]/12 bg-white/95 shadow-xs backdrop-blur-xs dark:border-white/10 dark:bg-[#1b1815]/95">
-          {/* Sub-barra estilo Prettier / Blueprint */}
-          <div className="flex items-center justify-between border-b border-dashed border-[#1a1614]/10 bg-[#f5f6f1]/70 px-4 py-2 font-mono text-[10px] text-[#736d67] dark:border-white/10 dark:bg-[#201c19]/80 dark:text-[#9c968f]">
-            <span className="truncate font-medium text-[#1a1614] dark:text-[#fafbf7]">
-              {name}
-            </span>
-            <span className="shrink-0">
-              {usePrettier && didFormat
-                ? "prettier · 2 spaces · 80 cols"
-                : "raw view"}
-            </span>
-          </div>
+        {isMarkdown && richMode ? (
+          <MarkdownPreview content={activeContent} />
+        ) : isCsv && richMode ? (
+          <CsvTableViewer content={rawContent} />
+        ) : (
+          <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-[#1a1614]/12 bg-white/95 shadow-xs backdrop-blur-xs dark:border-white/10 dark:bg-[#1b1815]/95">
+            {/* Sub-barra estilo Prettier / Blueprint */}
+            <div className="flex items-center justify-between border-b border-dashed border-[#1a1614]/10 bg-[#f5f6f1]/70 px-4 py-2 font-mono text-[10px] text-[#736d67] dark:border-white/10 dark:bg-[#201c19]/80 dark:text-[#9c968f]">
+              <span className="truncate font-medium text-[#1a1614] dark:text-[#fafbf7]">
+                {name}
+              </span>
+              <span className="shrink-0">
+                {usePrettier && didFormat
+                  ? "prettier · 2 spaces · 80 cols"
+                  : "raw view"}
+              </span>
+            </div>
 
-          <div className="overflow-x-auto py-3">
-            <table className="w-full border-collapse font-mono text-xs sm:text-[13px] leading-6">
-              <tbody>
-                {tokenizedLines.map((tokens, lineIdx) => (
-                  <tr
-                    key={lineIdx}
-                    className="group transition-colors hover:bg-[#c96726]/[0.04] dark:hover:bg-[#d77435]/[0.06]"
-                  >
-                    <td
-                      aria-hidden="true"
-                      className="w-10 sm:w-12 select-none border-r border-dashed border-[#1a1614]/10 px-2.5 sm:px-3 text-right align-top text-[11px] text-[#736d67]/50 group-hover:text-[#c96726] dark:border-white/10 dark:text-[#9c968f]/45 dark:group-hover:text-[#d77435]"
+            <div className="overflow-x-auto py-3">
+              <table className="w-full border-collapse font-mono text-xs sm:text-[13px] leading-6">
+                <tbody>
+                  {tokenizedLines.map((tokens, lineIdx) => (
+                    <tr
+                      key={lineIdx}
+                      className="group transition-colors hover:bg-[#c96726]/[0.04] dark:hover:bg-[#d77435]/[0.06]"
                     >
-                      {lineIdx + 1}
-                    </td>
-                    <td
-                      className={`px-3 sm:px-4 align-top ${
-                        wordWrap
-                          ? "whitespace-pre-wrap break-words"
-                          : "whitespace-pre"
-                      }`}
-                    >
-                      {tokens.length === 0 ? (
-                        <span>&nbsp;</span>
-                      ) : (
-                        tokens.map((tok, tokIdx) => (
-                          <span key={tokIdx} className={TOKEN_CLASSES[tok.type]}>
-                            {tok.text}
-                          </span>
-                        ))
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <td
+                        aria-hidden="true"
+                        className="w-10 sm:w-12 select-none border-r border-dashed border-[#1a1614]/10 px-2.5 sm:px-3 text-right align-top text-[11px] text-[#736d67]/50 group-hover:text-[#c96726] dark:border-white/10 dark:text-[#9c968f]/45 dark:group-hover:text-[#d77435]"
+                      >
+                        {lineIdx + 1}
+                      </td>
+                      <td
+                        className={`px-3 sm:px-4 align-top ${
+                          wordWrap
+                            ? "whitespace-pre-wrap break-words"
+                            : "whitespace-pre"
+                        }`}
+                      >
+                        {tokens.length === 0 ? (
+                          <span>&nbsp;</span>
+                        ) : (
+                          tokens.map((tok, tokIdx) => (
+                            <span key={tokIdx} className={TOKEN_CLASSES[tok.type]}>
+                              {tok.text}
+                            </span>
+                          ))
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

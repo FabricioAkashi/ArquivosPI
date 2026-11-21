@@ -13,13 +13,16 @@ import {
   Play,
   QrCode,
   RotateCcw,
+  StickyNote,
   Timer,
+  X,
 } from "lucide-react";
 import { FileItem } from "@/lib/types";
 import { formatBytes } from "@/lib/file-utils";
 import ImageViewer from "./ImageViewer";
 import TextViewer from "./TextViewer";
 import MediaViewer from "./MediaViewer";
+import ZipViewer from "./ZipViewer";
 import AmbientOrbs from "../AmbientOrbs";
 
 const PdfViewer = dynamic(() => import("./PdfViewer"), { ssr: false });
@@ -48,10 +51,34 @@ export default function FileViewer({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Subtle presentation timer
+  // Subtle presentation timer & presenter notes
   const [showTimer, setShowTimer] = useState(false);
   const [timerRunning, setTimerRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`pi-presenter-notes:${file.id}`);
+      setNotes(saved || "");
+    } catch {
+      setNotes("");
+    }
+  }, [file.id]);
+
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+    try {
+      if (value.trim()) {
+        localStorage.setItem(`pi-presenter-notes:${file.id}`, value);
+      } else {
+        localStorage.removeItem(`pi-presenter-notes:${file.id}`);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   useEffect(() => {
     if (!timerRunning) return;
@@ -214,6 +241,22 @@ export default function FileViewer({
 
           <button
             type="button"
+            onClick={() => setShowNotes((n) => !n)}
+            className={`inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full px-3 font-mono text-xs font-medium transition ${
+              showNotes || notes.trim().length > 0
+                ? showNotes
+                  ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                  : "border border-[#c96726]/40 bg-[#c96726]/10 text-[#c96726] dark:border-[#d77435]/40 dark:text-[#d77435]"
+                : "border border-[#1a1614]/15 bg-white/70 text-[#1a1614] hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+            }`}
+            title="Notas do apresentador para a banca"
+          >
+            <StickyNote className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+            <span className="hidden md:inline">NOTAS</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setShowTimer((t) => !t)}
             className={`inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full px-3 font-mono text-xs font-medium transition ${
               showTimer
@@ -323,27 +366,59 @@ export default function FileViewer({
             category={file.category}
           />
         )}
-        {file.category === "other" && (
-          <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900">
-              <FileQuestion className="h-6 w-6" />
+        {file.category === "other" &&
+          (file.extension.toLowerCase() === "zip" ||
+          file.mimeType.toLowerCase().includes("zip") ? (
+            <ZipViewer url={file.url} name={file.name} />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900">
+                <FileQuestion className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  Pré-visualização indisponível para .{file.extension || "arquivo"}
+                </p>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  Você pode baixar o arquivo diretamente para abri-lo no seu dispositivo.
+                </p>
+              </div>
+              <a
+                href={downloadHref}
+                download={file.name}
+                className="mt-1 inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+              >
+                <Download className="h-4 w-4" />
+                Baixar {file.name}
+              </a>
             </div>
-            <div>
-              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                Pré-visualização indisponível para .{file.extension || "arquivo"}
-              </p>
-              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Você pode baixar o arquivo diretamente para abri-lo no seu dispositivo.
-              </p>
+          ))}
+
+        {/* Gaveta flutuante de Notas do Apresentador */}
+        {showNotes && (
+          <div className="absolute right-3 bottom-3 z-40 w-[calc(100%-1.5rem)] max-w-sm rounded-2xl border border-[#1a1614]/15 bg-white/95 p-4 shadow-2xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95">
+            <div className="mb-2 flex items-center justify-between border-b border-dashed border-[#1a1614]/15 pb-2 dark:border-white/10">
+              <div className="flex items-center gap-1.5">
+                <StickyNote className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#6d8352] dark:text-[#7f9564]">
+                  NOTAS DA BANCA (LOCAL)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNotes(false)}
+                className="rounded-full p-1 text-[#736d67] hover:bg-[#1a1614]/5 dark:text-[#9c968f] dark:hover:bg-white/5"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <a
-              href={downloadHref}
-              download={file.name}
-              className="mt-1 inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-            >
-              <Download className="h-4 w-4" />
-              Baixar {file.name}
-            </a>
+            <textarea
+              value={notes}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              rows={5}
+              placeholder="Tópicos-chave para falar na apresentação deste arquivo (salvo automaticamente neste dispositivo)..."
+              className="w-full resize-none rounded-xl border border-[#1a1614]/12 bg-[#f5f6f1] p-2.5 font-sans text-xs leading-relaxed text-[#1a1614] outline-none transition focus:border-[#c96726] dark:border-white/12 dark:bg-[#161311] dark:text-[#fafbf7] dark:focus:border-[#d77435]"
+            />
           </div>
         )}
       </div>

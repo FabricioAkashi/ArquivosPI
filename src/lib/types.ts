@@ -8,6 +8,11 @@ export type FileCategory =
   | "text"
   | "other";
 
+export interface ProjectLink {
+  label: string;
+  url: string;
+}
+
 export interface Semester {
   id: string;
   name: string;
@@ -21,6 +26,10 @@ export interface Folder {
   semesterId: string;
   parentId?: string | null;
   name: string;
+  description?: string;
+  members?: string[];
+  advisor?: string;
+  links?: ProjectLink[];
   createdAt: string;
 }
 
@@ -35,6 +44,7 @@ export interface FileItem {
   category: FileCategory;
   url: string;
   storageKey: string;
+  pinned?: boolean;
   createdAt: string;
 }
 

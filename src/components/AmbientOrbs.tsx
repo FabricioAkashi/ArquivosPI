@@ -1,72 +1,71 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   motion,
   useMotionValue,
   useReducedMotion,
   useSpring,
-  useTransform,
 } from "motion/react";
 
 interface AmbientOrbsProps {
   className?: string;
 }
 
-/**
- * Fundo atmosférico com gradient orbs animados na paleta Antimetal
- * (cobre metálico, verde sálvia e lima quente) com paralaxe fluida
- * e brilho reativo ao ponteiro do mouse.
- */
-export default function AmbientOrbs({ className = "" }: AmbientOrbsProps) {
-  const reduced = !!useReducedMotion();
-  const [hasPointer, setHasPointer] = useState(false);
+interface RepellingOrbProps {
+  positionClassName: string;
+  orbClassName: string;
+  radius?: number;
+  maxPush?: number;
+  reduced: boolean;
+}
 
-  // Coordenadas normalizadas [-1, 1] para paralaxe suave dos 3 orbs principais
-  const normX = useMotionValue(0);
-  const normY = useMotionValue(0);
+const SPRING_CONFIG = { stiffness: 45, damping: 22, mass: 1.2 };
 
-  // Posição absoluta do ponteiro para o orb seguidor suave
-  const pointerX = useMotionValue(-400);
-  const pointerY = useMotionValue(-400);
-
-  const springConfig = { stiffness: 55, damping: 24, mass: 1.1 };
-  const smoothNormX = useSpring(normX, springConfig);
-  const smoothNormY = useSpring(normY, springConfig);
-
-  const cursorX = useSpring(pointerX, { stiffness: 90, damping: 28, mass: 0.8 });
-  const cursorY = useSpring(pointerY, { stiffness: 90, damping: 28, mass: 0.8 });
-
-  // Fatores distintos de paralaxe por camada para sensação tridimensional
-  const orb1X = useTransform(smoothNormX, [-1, 1], [-42, 42]);
-  const orb1Y = useTransform(smoothNormY, [-1, 1], [-32, 32]);
-
-  const orb2X = useTransform(smoothNormX, [-1, 1], [36, -36]);
-  const orb2Y = useTransform(smoothNormY, [-1, 1], [28, -28]);
-
-  const orb3X = useTransform(smoothNormX, [-1, 1], [-28, 28]);
-  const orb3Y = useTransform(smoothNormY, [-1, 1], [34, -34]);
+function RepellingOrb({
+  positionClassName,
+  orbClassName,
+  radius = 520,
+  maxPush = 75,
+  reduced,
+}: RepellingOrbProps) {
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  const rawX = useMotionValue(0);
+  const rawY = useMotionValue(0);
+  const springX = useSpring(rawX, SPRING_CONFIG);
+  const springY = useSpring(rawY, SPRING_CONFIG);
 
   useEffect(() => {
     if (reduced || typeof window === "undefined") return;
 
     const handlePointerMove = (e: PointerEvent) => {
       if (e.pointerType && e.pointerType !== "mouse") return;
-      const vw = window.innerWidth || 1;
-      const vh = window.innerHeight || 1;
+      const el = anchorRef.current;
+      if (!el) return;
 
-      normX.set((e.clientX / vw) * 2 - 1);
-      normY.set((e.clientY / vh) * 2 - 1);
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
 
-      pointerX.set(e.clientX - 190);
-      pointerY.set(e.clientY - 190);
+      const dx = cx - e.clientX;
+      const dy = cy - e.clientY;
+      const dist = Math.hypot(dx, dy);
 
-      setHasPointer((prev) => (prev ? prev : true));
+      if (dist < radius) {
+        const strength = Math.pow(1 - dist / radius, 1.8);
+        const ux = dist > 1 ? dx / dist : 0;
+        const uy = dist > 1 ? dy / dist : -1;
+        rawX.set(ux * maxPush * strength);
+        rawY.set(uy * maxPush * strength);
+      } else {
+        rawX.set(0);
+        rawY.set(0);
+      }
     };
 
     const handlePointerLeave = () => {
-      normX.set(0);
-      normY.set(0);
+      rawX.set(0);
+      rawY.set(0);
     };
 
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
@@ -75,7 +74,27 @@ export default function AmbientOrbs({ className = "" }: AmbientOrbsProps) {
       window.removeEventListener("pointermove", handlePointerMove);
       document.removeEventListener("mouseleave", handlePointerLeave);
     };
-  }, [reduced, normX, normY, pointerX, pointerY]);
+  }, [reduced, radius, maxPush, rawX, rawY]);
+
+  return (
+    <div ref={anchorRef} className={`absolute ${positionClassName}`}>
+      <motion.div
+        style={reduced ? undefined : { x: springX, y: springY }}
+        className="h-full w-full"
+      >
+        <div className={`${orbClassName} h-full w-full rounded-full blur-3xl`} />
+      </motion.div>
+    </div>
+  );
+}
+
+/**
+ * Fundo atmosférico com gradient orbs animados na paleta Antimetal
+ * (cobre metálico, verde sálvia e lima quente). Os orbes derivam lentamente
+ * sozinhos no fundo e se afastam com suavidade quando o mouse se aproxima.
+ */
+export default function AmbientOrbs({ className = "" }: AmbientOrbsProps) {
+  const reduced = !!useReducedMotion();
 
   return (
     <div
@@ -83,39 +102,31 @@ export default function AmbientOrbs({ className = "" }: AmbientOrbsProps) {
       className={`pointer-events-none absolute inset-0 z-0 overflow-hidden select-none ${className}`}
     >
       {/* Orb 1: Cobre Metálico (canto superior esquerdo) */}
-      <motion.div
-        style={reduced ? undefined : { x: orb1X, y: orb1Y }}
-        className="absolute -top-[16%] -left-[10%] h-[460px] w-[460px] sm:h-[680px] sm:w-[680px]"
-      >
-        <div className="ambient-orb-1 h-full w-full rounded-full blur-3xl" />
-      </motion.div>
+      <RepellingOrb
+        positionClassName="-top-[14%] -left-[8%] h-[460px] w-[460px] sm:h-[680px] sm:w-[680px]"
+        orbClassName="ambient-orb-1"
+        radius={560}
+        maxPush={80}
+        reduced={reduced}
+      />
 
-      {/* Orb 2: Verde Sálvia Técnico (canto direito médio — contra-paralaxe) */}
-      <motion.div
-        style={reduced ? undefined : { x: orb2X, y: orb2Y }}
-        className="absolute top-[14%] -right-[12%] h-[480px] w-[480px] sm:h-[720px] sm:w-[720px]"
-      >
-        <div className="ambient-orb-2 h-full w-full rounded-full blur-3xl" />
-      </motion.div>
+      {/* Orb 2: Verde Sálvia Técnico (lateral direita média) */}
+      <RepellingOrb
+        positionClassName="top-[16%] -right-[10%] h-[480px] w-[480px] sm:h-[720px] sm:w-[720px]"
+        orbClassName="ambient-orb-2"
+        radius={580}
+        maxPush={80}
+        reduced={reduced}
+      />
 
       {/* Orb 3: Lima Quente / Âmbar (inferior central) */}
-      <motion.div
-        style={reduced ? undefined : { x: orb3X, y: orb3Y }}
-        className="absolute -bottom-[20%] left-[20%] h-[440px] w-[440px] sm:h-[640px] sm:w-[640px]"
-      >
-        <div className="ambient-orb-3 h-full w-full rounded-full blur-3xl" />
-      </motion.div>
-
-      {/* Orb 4: Halo reativo que acompanha suavemente o mouse no desktop */}
-      {!reduced && (
-        <motion.div
-          style={{ x: cursorX, y: cursorY }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: hasPointer ? 1 : 0 }}
-          transition={{ duration: 0.45 }}
-          className="ambient-orb-cursor hidden md:block absolute top-0 left-0 h-[380px] w-[380px] rounded-full blur-3xl"
-        />
-      )}
+      <RepellingOrb
+        positionClassName="-bottom-[18%] left-[22%] h-[440px] w-[440px] sm:h-[640px] sm:w-[640px]"
+        orbClassName="ambient-orb-3"
+        radius={520}
+        maxPush={75}
+        reduced={reduced}
+      />
     </div>
   );
 }

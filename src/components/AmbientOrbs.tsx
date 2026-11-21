@@ -20,13 +20,13 @@ interface RepellingOrbProps {
   reduced: boolean;
 }
 
-const SPRING_CONFIG = { stiffness: 45, damping: 22, mass: 1.2 };
+const SPRING_CONFIG = { stiffness: 65, damping: 18, mass: 0.9 };
 
 function RepellingOrb({
   positionClassName,
   orbClassName,
-  radius = 520,
-  maxPush = 75,
+  radius = 640,
+  maxPush = 180,
   reduced,
 }: RepellingOrbProps) {
   const anchorRef = useRef<HTMLDivElement | null>(null);
@@ -52,7 +52,7 @@ function RepellingOrb({
       const dist = Math.hypot(dx, dy);
 
       if (dist < radius) {
-        const strength = Math.pow(1 - dist / radius, 1.8);
+        const strength = Math.pow(1 - dist / radius, 1.35);
         const ux = dist > 1 ? dx / dist : 0;
         const uy = dist > 1 ? dy / dist : -1;
         rawX.set(ux * maxPush * strength);
@@ -82,7 +82,7 @@ function RepellingOrb({
         style={reduced ? undefined : { x: springX, y: springY }}
         className="h-full w-full"
       >
-        <div className={`${orbClassName} h-full w-full rounded-full blur-3xl`} />
+        <div className={`${orbClassName} h-full w-full rounded-full blur-2xl`} />
       </motion.div>
     </div>
   );
@@ -90,8 +90,8 @@ function RepellingOrb({
 
 /**
  * Fundo atmosférico com gradient orbs animados na paleta Antimetal
- * (cobre metálico, verde sálvia e lima quente). Os orbes derivam lentamente
- * sozinhos no fundo e se afastam com suavidade quando o mouse se aproxima.
+ * (cobre metálico, verde sálvia e lima quente). Os orbes derivam
+ * continuamente no fundo e se afastam suavemente quando o mouse se aproxima.
  */
 export default function AmbientOrbs({ className = "" }: AmbientOrbsProps) {
   const reduced = !!useReducedMotion();
@@ -101,30 +101,30 @@ export default function AmbientOrbs({ className = "" }: AmbientOrbsProps) {
       aria-hidden="true"
       className={`pointer-events-none absolute inset-0 z-0 overflow-hidden select-none ${className}`}
     >
-      {/* Orb 1: Cobre Metálico (canto superior esquerdo) */}
+      {/* Orb 1: Cobre Metálico (região superior esquerda) */}
       <RepellingOrb
-        positionClassName="-top-[14%] -left-[8%] h-[460px] w-[460px] sm:h-[680px] sm:w-[680px]"
+        positionClassName="top-[-6%] left-[2%] h-[360px] w-[360px] sm:h-[520px] sm:w-[520px]"
         orbClassName="ambient-orb-1"
-        radius={560}
-        maxPush={80}
+        radius={620}
+        maxPush={185}
         reduced={reduced}
       />
 
-      {/* Orb 2: Verde Sálvia Técnico (lateral direita média) */}
+      {/* Orb 2: Verde Sálvia Técnico (região direita média) */}
       <RepellingOrb
-        positionClassName="top-[16%] -right-[10%] h-[480px] w-[480px] sm:h-[720px] sm:w-[720px]"
+        positionClassName="top-[22%] right-[2%] h-[380px] w-[380px] sm:h-[540px] sm:w-[540px]"
         orbClassName="ambient-orb-2"
-        radius={580}
-        maxPush={80}
+        radius={640}
+        maxPush={185}
         reduced={reduced}
       />
 
-      {/* Orb 3: Lima Quente / Âmbar (inferior central) */}
+      {/* Orb 3: Lima Quente / Âmbar (região inferior central) */}
       <RepellingOrb
-        positionClassName="-bottom-[18%] left-[22%] h-[440px] w-[440px] sm:h-[640px] sm:w-[640px]"
+        positionClassName="bottom-[-6%] left-[28%] h-[340px] w-[340px] sm:h-[480px] sm:w-[480px]"
         orbClassName="ambient-orb-3"
-        radius={520}
-        maxPush={75}
+        radius={600}
+        maxPush={170}
         reduced={reduced}
       />
     </div>

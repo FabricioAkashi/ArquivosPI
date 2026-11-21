@@ -206,17 +206,17 @@ export default function FileViewer({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex w-full sm:w-auto flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           {/* Timer widget */}
           {showTimer && (
-            <div className="mr-1 flex items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-[#f5f6f1] px-3 py-1 font-mono text-xs dark:border-white/15 dark:bg-[#161311]">
+            <div className="mr-1 flex h-9 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-[#f5f6f1] px-3 font-mono text-xs dark:border-white/15 dark:bg-[#161311]">
               <span className="font-bold text-[#1a1614] dark:text-[#fafbf7]">
                 {formattedTime}
               </span>
               <button
                 type="button"
                 onClick={() => setTimerRunning((r) => !r)}
-                className="rounded-full p-0.5 text-[#736d67] hover:bg-[#1a1614]/10 dark:text-[#9c968f] dark:hover:bg-white/10"
+                className="rounded-full p-1 text-[#736d67] hover:bg-[#1a1614]/10 dark:text-[#9c968f] dark:hover:bg-white/10"
                 title={timerRunning ? "Pausar" : "Iniciar"}
               >
                 {timerRunning ? (
@@ -231,7 +231,7 @@ export default function FileViewer({
                   setTimerRunning(false);
                   setSeconds(0);
                 }}
-                className="rounded-full p-0.5 text-[#736d67] hover:bg-[#1a1614]/10 dark:text-[#9c968f] dark:hover:bg-white/10"
+                className="rounded-full p-1 text-[#736d67] hover:bg-[#1a1614]/10 dark:text-[#9c968f] dark:hover:bg-white/10"
                 title="Zerar cronômetro"
               >
                 <RotateCcw className="h-3 w-3" />
@@ -242,7 +242,7 @@ export default function FileViewer({
           <button
             type="button"
             onClick={() => setShowNotes((n) => !n)}
-            className={`inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full px-3 font-mono text-xs font-medium transition ${
+            className={`inline-flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-0 md:px-3 font-mono text-xs font-medium transition ${
               showNotes || notes.trim().length > 0
                 ? showNotes
                   ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
@@ -250,6 +250,7 @@ export default function FileViewer({
                 : "border border-[#1a1614]/15 bg-white/70 text-[#1a1614] hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             }`}
             title="Notas do apresentador para a banca"
+            aria-label="Notas do apresentador"
           >
             <StickyNote className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
             <span className="hidden md:inline">NOTAS</span>
@@ -258,12 +259,13 @@ export default function FileViewer({
           <button
             type="button"
             onClick={() => setShowTimer((t) => !t)}
-            className={`inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full px-3 font-mono text-xs font-medium transition ${
+            className={`inline-flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-0 md:px-3 font-mono text-xs font-medium transition ${
               showTimer
                 ? "bg-[#1a1614] text-[#fafbf7] dark:bg-[#fafbf7] dark:text-[#1a1614]"
                 : "border border-[#1a1614]/15 bg-white/70 text-[#1a1614] hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             }`}
             title="Cronômetro de apresentação"
+            aria-label="Cronômetro de apresentação"
           >
             <Timer className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
             <span className="hidden md:inline">TEMPO</span>
@@ -272,8 +274,9 @@ export default function FileViewer({
           <button
             type="button"
             onClick={onOpenQr}
-            className="inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+            className="inline-flex h-9 w-9 sm:w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#1a1614]/15 bg-white/70 px-0 sm:px-3 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title="Gerar QR Code deste arquivo"
+            aria-label="Gerar QR Code deste arquivo"
           >
             <QrCode className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
             <span className="hidden sm:inline">QR</span>
@@ -284,8 +287,9 @@ export default function FileViewer({
             download={file.name}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+            className="inline-flex h-9 w-9 sm:w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#1a1614]/15 bg-white/70 px-0 sm:px-3 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
             title="Baixar arquivo"
+            aria-label="Baixar arquivo"
           >
             <Download className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">BAIXAR</span>
@@ -294,12 +298,15 @@ export default function FileViewer({
           <button
             type="button"
             onClick={toggleFullscreen}
-            className={`inline-flex h-8 sm:h-8.5 items-center gap-1.5 rounded-full px-3.5 font-mono text-xs font-medium transition shadow-xs ${
+            className={`inline-flex h-9 ${
+              isFullscreen ? "px-3.5" : "w-9 sm:w-auto px-0 sm:px-3.5"
+            } items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-mono text-xs font-medium transition shadow-xs ${
               isFullscreen
                 ? "bg-[#c96726] text-white dark:bg-[#d77435]"
                 : "bg-[#1a1614] text-[#fafbf7] hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
             }`}
             title="Modo apresentação / Tela cheia (F)"
+            aria-label={isFullscreen ? "Sair da tela cheia" : "Modo apresentação"}
           >
             {isFullscreen ? (
               <>

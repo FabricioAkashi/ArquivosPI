@@ -104,13 +104,13 @@ export default function ExpandingSearch({
                 damping: 35,
               }
         }
-        className="relative flex h-8.5 items-center overflow-hidden rounded-full border border-[#1a1614]/15 bg-white/90 shadow-2xs backdrop-blur-xs dark:border-white/15 dark:bg-[#201c19]/90"
+        className="relative flex h-9 max-w-[calc(100vw-2rem)] items-center overflow-hidden rounded-full border border-[#1a1614]/15 bg-white/90 shadow-2xs backdrop-blur-xs dark:border-white/15 dark:bg-[#201c19]/90"
       >
         {/* Botão / Ícone de busca */}
         <button
           type="button"
           onClick={handleOpen}
-          className="flex h-8.5 w-8.5 shrink-0 items-center justify-center text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
+          className="flex h-9 w-9 shrink-0 items-center justify-center text-[#736d67] hover:text-[#1a1614] dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
           title="Buscar"
         >
           <Search className="h-3.5 w-3.5" />
@@ -159,7 +159,7 @@ export default function ExpandingSearch({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-full z-40 mt-1.5 w-72 overflow-hidden rounded-2xl border border-[#1a1614]/15 bg-white/95 p-1 shadow-xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95"
+            className="absolute left-0 top-full z-40 mt-1.5 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-[#1a1614]/15 bg-white/95 p-1 shadow-xl backdrop-blur-md dark:border-white/15 dark:bg-[#201c19]/95"
           >
             <div className="px-2.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-[#736d67] dark:text-[#9c968f]">
               Resultados ({filteredItems.length})

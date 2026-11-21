@@ -171,7 +171,7 @@ export default function PdfViewer({ url, name }: PdfViewerProps) {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 px-4 py-2 text-xs dark:border-neutral-800">
         {!nativeMode ? (
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               disabled={pageNumber <= 1}
@@ -181,7 +181,7 @@ export default function PdfViewer({ url, name }: PdfViewerProps) {
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="min-w-[68px] text-center font-mono text-xs font-medium text-neutral-700 dark:text-neutral-300">
+            <span className="min-w-[60px] text-center font-mono text-xs font-medium text-neutral-700 dark:text-neutral-300">
               {numPages > 0 ? `${pageNumber} / ${numPages}` : "—"}
             </span>
             <button
@@ -194,17 +194,17 @@ export default function PdfViewer({ url, name }: PdfViewerProps) {
               <ChevronRight className="h-5 w-5" />
             </button>
 
-            <div className="mx-1.5 h-4 w-px bg-neutral-200 dark:bg-neutral-800" />
+            <div className="mx-1 hidden h-4 w-px bg-neutral-200 sm:block dark:bg-neutral-800" />
 
             <button
               type="button"
               onClick={() =>
                 setZoom((z) => Math.max(0.5, +(z - 0.15).toFixed(2)))
               }
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
               title="Diminuir zoom"
             >
-              <ZoomOut className="h-3.5 w-3.5" />
+              <ZoomOut className="h-4 w-4" />
             </button>
             <span className="min-w-[44px] text-center font-mono text-neutral-500 dark:text-neutral-400">
               {Math.round(zoom * 100)}%
@@ -214,15 +214,15 @@ export default function PdfViewer({ url, name }: PdfViewerProps) {
               onClick={() =>
                 setZoom((z) => Math.min(2.5, +(z + 0.15).toFixed(2)))
               }
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
               title="Aumentar zoom"
             >
-              <ZoomIn className="h-3.5 w-3.5" />
+              <ZoomIn className="h-4 w-4" />
             </button>
             <button
               type="button"
               onClick={() => setZoom(1)}
-              className="rounded-md px-2 py-1 text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="h-8 rounded-md px-2.5 text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Ajustar
             </button>

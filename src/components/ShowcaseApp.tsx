@@ -1669,7 +1669,7 @@ export default function ShowcaseApp({
                           setActiveSemesterId(null);
                         }
                       }}
-                      className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                      className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                       title="Subir de nível"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
@@ -1693,7 +1693,7 @@ export default function ShowcaseApp({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
                   {/* Busca Expansível Arc */}
                   {activeSemesterId && currentLevelFiles.length > 0 && (
                     <ExpandingSearch
@@ -1708,7 +1708,7 @@ export default function ShowcaseApp({
                   {/* Alternar Grid / Lista com ExpandingButtonGroup Arc */}
                   {activeSemesterId && currentLevelFiles.length > 0 && (
                     <ExpandingButtonGroup
-                      className="hidden sm:inline-flex"
+                      className="inline-flex"
                       items={[
                         {
                           id: "grid",
@@ -1734,8 +1734,9 @@ export default function ShowcaseApp({
                       type="button"
                       disabled={zippingFolderId === activeFolder.id}
                       onClick={() => void handleDownloadFolderZip(activeFolder)}
-                      className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white disabled:opacity-50 dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                      className="inline-flex h-9 w-9 sm:w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#1a1614]/15 bg-white/70 px-0 sm:px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white disabled:opacity-50 dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                       title="Compactar e baixar todos os arquivos desta pasta"
+                      aria-label="Baixar pasta em .zip"
                     >
                       {zippingFolderId === activeFolder.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-[#c96726]" />
@@ -1755,8 +1756,9 @@ export default function ShowcaseApp({
                         <button
                           type="button"
                           onClick={() => handleEditFolder(activeFolder)}
-                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                          className="inline-flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#1a1614]/15 bg-white/70 px-0 md:px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                           title="Editar nome ou Ficha Técnica (Integrantes, Links, Resumo)"
+                          aria-label="Editar ficha técnica da pasta"
                         >
                           <Edit3 className="h-3.5 w-3.5 text-[#736d67] dark:text-[#9c968f]" />
                           <span className="hidden md:inline">FICHA</span>
@@ -1770,7 +1772,7 @@ export default function ShowcaseApp({
                             setEditingFolder(null);
                             setFolderModalOpen(true);
                           }}
-                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
+                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#1a1614]/15 bg-white/70 px-3.5 font-mono text-xs font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#201c19]/70 dark:text-[#fafbf7] dark:hover:bg-[#201c19]"
                           title="Criar nova pasta neste semestre"
                         >
                           <FolderPlus className="h-3.5 w-3.5 text-[#c96726] dark:text-[#d77435]" />
@@ -1785,7 +1787,7 @@ export default function ShowcaseApp({
                             setEditingSemester(null);
                             setSemesterModalOpen(true);
                           }}
-                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-[#1a1614] px-4 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#1a1614] px-4 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
                         >
                           <Plus className="h-3.5 w-3.5" />
                           <span>NOVO SEMESTRE</span>
@@ -1794,7 +1796,7 @@ export default function ShowcaseApp({
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-[#1a1614] px-4 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
+                          className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#1a1614] px-4 font-mono text-xs font-medium text-[#fafbf7] shadow-xs transition hover:opacity-90 dark:bg-[#fafbf7] dark:text-[#1a1614]"
                         >
                           <UploadCloud className="h-3.5 w-3.5" />
                           <span>ENVIAR ARQUIVO</span>
@@ -2152,7 +2154,7 @@ export default function ShowcaseApp({
                                 setSortBy(e.target.value as "recent" | "name" | "size")
                               }
                               aria-label="Ordenar arquivos"
-                              className="h-7.5 rounded-full border border-[#1a1614]/15 bg-white/80 px-2.5 font-mono text-[10px] font-medium text-[#1a1614] outline-none dark:border-white/15 dark:bg-[#201c19]/80 dark:text-[#fafbf7]"
+                              className="h-8.5 rounded-full border border-[#1a1614]/15 bg-white/80 px-3 font-mono text-[10px] font-medium text-[#1a1614] outline-none dark:border-white/15 dark:bg-[#201c19]/80 dark:text-[#fafbf7]"
                             >
                               <option value="recent">Mais recentes</option>
                               <option value="name">Nome (A–Z)</option>

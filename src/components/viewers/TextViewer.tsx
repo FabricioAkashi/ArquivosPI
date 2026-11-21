@@ -223,14 +223,15 @@ export default function TextViewer({ url, name }: TextViewerProps) {
             <button
               type="button"
               onClick={() => setWordWrap((w) => !w)}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium transition ${
+              className={`inline-flex h-8 w-8 sm:w-auto items-center justify-center gap-1 whitespace-nowrap rounded-full border px-0 sm:px-2.5 font-mono text-[11px] font-medium transition ${
                 wordWrap
                   ? "border-[#1a1614]/20 bg-[#1a1614] text-[#fafbf7] dark:border-white/20 dark:bg-[#fafbf7] dark:text-[#1a1614]"
                   : "border-[#1a1614]/15 bg-white/80 text-[#736d67] hover:text-[#1a1614] dark:border-white/15 dark:bg-[#161311]/80 dark:text-[#9c968f] dark:hover:text-[#fafbf7]"
               }`}
               title="Alternar quebra automática de linha"
+              aria-label="Alternar quebra automática de linha"
             >
-              <WrapText className="h-3 w-3" />
+              <WrapText className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">QUEBRA</span>
             </button>
           )}
@@ -238,7 +239,7 @@ export default function TextViewer({ url, name }: TextViewerProps) {
           <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#1a1614]/15 bg-white/80 px-3 py-1 font-mono text-[11px] font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#161311]/80 dark:text-[#fafbf7] dark:hover:bg-[#161311]"
+            className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#1a1614]/15 bg-white/80 px-3 font-mono text-[11px] font-medium text-[#1a1614] shadow-2xs transition hover:bg-white dark:border-white/15 dark:bg-[#161311]/80 dark:text-[#fafbf7] dark:hover:bg-[#161311]"
           >
             {copied ? (
               <>
